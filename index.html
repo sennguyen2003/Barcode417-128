@@ -11,6 +11,9 @@
     <!-- Library for Generating Barcodes (PDF417 & Code128) -->
     <script src="https://cdn.jsdelivr.net/npm/bwip-js@3.2.1/dist/bwip-js-min.js"></script>
 
+    <!-- NEW: Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
     <!-- Link to your CSS file -->
     <link rel="stylesheet" href="css/style.css">
 
@@ -18,70 +21,80 @@
 <body>
 
     <div class="container">
-        <nav class="app-switcher">
-            <button id="switch-to-417" class="active">AAMVA PDF417 Generator</button>
-            <button id="switch-to-128">Code 128 Generator</button>
-        </nav>
+        <header class="main-header">
+            <h1><i class="fa-solid fa-barcode"></i> Barcode Generator Suite</h1>
+            <nav class="app-switcher">
+                <button id="switch-to-417" class="active"><i class="fa-solid fa-id-card"></i> AAMVA PDF417</button>
+                <button id="switch-to-128"><i class="fa-solid fa-tag"></i> Code 128</button>
+            </nav>
+        </header>
 
         <!-- ================================================================= -->
         <!-- =================== APP 417 (PDF417) CONTAINER ================== -->
         <!-- ================================================================= -->
         <div id="app-417-container">
              <div class="grid-2-col">
-                <!-- Input Column -->
-                <div id="a417-input-fields">
-                    <h2>AAMVA 2020 DL/ID Data Entry</h2>
-                    <!-- Field Groups will be dynamically inserted here by JavaScript -->
+                <!-- Input Column with Accordion -->
+                <div id="a417-input-panel">
+                    <div id="a417-controls" class="controls-bar">
+                        <!-- Controls will be dynamically inserted here -->
+                    </div>
+                    <div id="a417-accordion-container">
+                        <!-- Accordion items will be dynamically inserted here by JavaScript -->
+                    </div>
                 </div>
                 <!-- Output Column -->
-                <div id="a417-output-container">
-                    <h2>Output Data & Export</h2>
-                     <div class="a417-output-panes">
-                        <div>
-                            <h3>Imported Records List</h3>
-                            <div class="table-container" style="max-height: 60vh;">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr><th>Filename</th><th>Name</th></tr>
-                                    </thead>
-                                    <tbody id="a417-records-table-body">
-                                    </tbody>
-                                </table>
-                            </div>
-                            <button id="a417-export-all-btn" style="width:100%; margin-top: 10px;">Export All Images</button>
+                <div id="a417-output-panel">
+                    <div class="card">
+                        <h3><i class="fa-solid fa-list-ul"></i> Records List</h3>
+                        <div class="table-container" style="max-height: 200px;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr><th>Filename</th><th>Name</th></tr>
+                                </thead>
+                                <tbody id="a417-records-table-body">
+                                </tbody>
+                            </table>
                         </div>
-                        <div>
-                            <fieldset>
-                                <legend>Bulk Export Settings</legend>
-                                <div class="grid-2-col">
-                                    <div><label>Scale: <input type="number" id="a417-scale-input" value="4"></label></div>
-                                    <div><label>Padding: <input type="number" id="a417-padding-input" value="10"></label></div>
-                                </div>
-                                <p class="info-text">*Padding is for preview only. Bulk export padding is always 0.</p>
-                                <hr>
-                                <label><input type="checkbox" id="a417-fixed-size-check" checked> Export with fixed size</label>
-                                <div class="grid-2-col">
-                                    <div><label>Width (px): <input type="number" id="a417-fixed-width-input" value="1200"></label></div>
-                                    <div><label>Height (px): <input type="number" id="a417-fixed-height-input" value="300"></label></div>
-                                </div>
-                                <hr>
-                                <label>DPI: <input type="number" id="a417-dpi-input" value="300"></label>
-                                <p class="info-text">*DPI is metadata for software like Photoshop.</p>
-                            </fieldset>
+                        <button id="a417-export-all-btn" class="button-full-width"><i class="fa-solid fa-download"></i> Export All Images</button>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="output-tabs">
+                            <button class="tab-link active" data-tab="a417-preview-tab"><i class="fa-solid fa-eye"></i> Preview</button>
+                            <button class="tab-link" data-tab="a417-data-tab"><i class="fa-solid fa-file-code"></i> Data</button>
+                            <button class="tab-link" data-tab="a417-settings-tab"><i class="fa-solid fa-gears"></i> Settings</button>
+                        </div>
 
-                             <fieldset>
-                                <legend>Image Preview</legend>
-                                <div id="a417-barcode-preview">
-                                    <p>Select a record or generate data to see preview.</p>
-                                </div>
-                            </fieldset>
-
-                            <div>
-                               <textarea id="a417-formatted-data" class="code-display" readonly placeholder="Formatted Data..."></textarea>
-                               <textarea id="a417-raw-data" class="code-display" readonly placeholder="Raw AAMVA Data..."></textarea>
+                        <div id="a417-preview-tab" class="tab-content active">
+                            <div id="a417-barcode-preview">
+                                <p>Select a record or generate data to see preview.</p>
                             </div>
                         </div>
-                     </div>
+
+                        <div id="a417-data-tab" class="tab-content">
+                            <label class="textarea-label">Formatted Data</label>
+                            <textarea id="a417-formatted-data" class="code-display" readonly></textarea>
+                            <label class="textarea-label">Raw AAMVA Data String</label>
+                            <textarea id="a417-raw-data" class="code-display" readonly></textarea>
+                        </div>
+
+                        <div id="a417-settings-tab" class="tab-content">
+                            <h4>Bulk Export Settings</h4>
+                             <div class="grid-2-col">
+                                <div><label>Scale: <input type="number" id="a417-scale-input" value="4"></label></div>
+                                <div><label>Padding (Preview): <input type="number" id="a417-padding-input" value="10"></label></div>
+                            </div>
+                            <hr>
+                            <label><input type="checkbox" id="a417-fixed-size-check" checked> Export with fixed size</label>
+                            <div class="grid-2-col">
+                                <div><label>Width (px): <input type="number" id="a417-fixed-width-input" value="1200"></label></div>
+                                <div><label>Height (px): <input type="number" id="a417-fixed-height-input" value="300"></label></div>
+                            </div>
+                            <hr>
+                            <label>DPI: <input type="number" id="a417-dpi-input" value="300"></label>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -90,29 +103,28 @@
         <!-- =================== APP 128 (Code128) CONTAINER ================= -->
         <!-- ================================================================= -->
         <div id="app-128-container" class="hidden">
-             <h2>Code 128 Generator</h2>
-            <fieldset>
-                <legend>1. Import & 3. Export</legend>
-                 <label for="a128-file-input" class="file-input-label">1. Import from Excel</label>
-                 <input type="file" id="a128-file-input" accept=".xlsx, .xls">
-                 <button id="a128-save-all-btn" disabled>3. Save All Barcodes</button>
-            </fieldset>
-
-            <div class="status-bar">
-                <span id="a128-status-label">Ready to import file.</span>
-                <progress id="a128-progress-bar" value="0" max="100"></progress>
+            <div class="card">
+                <div class="controls-bar">
+                     <label for="a128-file-input" class="file-input-label"><i class="fa-solid fa-file-import"></i> 1. Import from Excel</label>
+                     <input type="file" id="a128-file-input" accept=".xlsx, .xls">
+                     <button id="a128-save-all-btn" disabled><i class="fa-solid fa-download"></i> 3. Save All Barcodes</button>
+                </div>
+                 <div class="status-bar">
+                    <span id="a128-status-label">Ready to import file.</span>
+                    <progress id="a128-progress-bar" value="0" max="100"></progress>
+                </div>
             </div>
-            
-            <fieldset>
-                <legend>2. Barcode Options</legend>
-                <label><input type="checkbox" id="a128-show-text-check" checked> Show text below barcode</label>
-                <label style="margin-left:20px;"><input type="checkbox" id="a128-transparent-bg-check"> Transparent background on save</label>
-                <label style="margin-left:20px;">Height (px): <input type="number" id="a128-height-input" value="120" style="width: 80px;"></label>
-            </fieldset>
-
+             <div class="card">
+                <h3><i class="fa-solid fa-sliders"></i> 2. Barcode Options</h3>
+                <div class="options-bar">
+                    <label><input type="checkbox" id="a128-show-text-check" checked> Show text below barcode</label>
+                    <label><input type="checkbox" id="a128-transparent-bg-check"> Transparent background</label>
+                    <label>Height (px): <input type="number" id="a128-height-input" value="120" style="width: 80px;"></label>
+                </div>
+            </div>
             <div class="grid-2-col">
-                <div>
-                    <h3>Barcode List</h3>
+                <div class="card">
+                    <h3><i class="fa-solid fa-list-ul"></i> Barcode List</h3>
                     <div class="table-container">
                         <table class="data-table">
                             <thead>
@@ -123,8 +135,8 @@
                         </table>
                     </div>
                 </div>
-                <div>
-                     <h3>Barcode Preview</h3>
+                <div class="card">
+                     <h3><i class="fa-solid fa-eye"></i> Barcode Preview</h3>
                      <div id="a128-barcode-preview">
                          <p>Select an item to preview</p>
                      </div>
@@ -134,7 +146,6 @@
     </div>
 
     <!-- Link to your JavaScript files -->
-    <!-- Modules must be loaded before the main app script that calls them -->
     <script src="js/pdf417-generator.js"></script>
     <script src="js/code128-generator.js"></script>
     <script src="js/app.js"></script>

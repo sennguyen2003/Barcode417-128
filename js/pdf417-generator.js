@@ -1,9 +1,7 @@
 // js/pdf417-generator.js
 function initializePdf417Generator(exportCanvasesToDirectory) {
-    // This is a self-contained module for the PDF417 generator.
-    // It is wrapped in a function to avoid polluting the global scope.
-
-    const inputFieldsContainer = document.getElementById('a417-input-fields');
+    const accordionContainer = document.getElementById('a417-accordion-container');
+    const controlsContainer = document.getElementById('a417-controls');
     const recordsTableBody = document.getElementById('a417-records-table-body');
     const barcodePreview = document.getElementById('a417-barcode-preview');
     const formattedDataText = document.getElementById('a417-formatted-data');
@@ -14,15 +12,15 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
     let a417_barcode_images = {};
 
     const fieldDefinitions = {
-        "Header Information": [
+        "Header Information": { icon: "fa-solid fa-file-invoice", fields: [
             {label: "Issuer Identification Number (IIN):", name: "iin", value: "636000"},
             {label: "AAMVA Version Number:", name: "aamva_version", value: "10"},
             {label: "Jurisdiction Version Number:", name: "jurisdiction_version", value: "00"},
             {label: "Number of Subfiles:", name: "subfile_count", value: "01"},
             {label: "DL Subfile Length:", name: "dl_subfile_length", value: "", placeholder: "Auto-calculated"},
             {label: "Jurisdiction Subfile Length:", name: "jurisdiction_subfile_length", value: "0000"}
-        ],
-        "Identification Information": [
+        ]},
+        "Identification Information": { icon: "fa-solid fa-user", fields: [
             {label: "Family Name (DCS):", name: "family_name"}, 
             {label: "First Name (DAC):", name: "first_name"},
             {label: "Middle Name(s) (DAD):", name: "middle_name"}, 
@@ -36,15 +34,15 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             {label: "Family Name Truncation (DDE):", name: "family_name_trunc", type: 'combobox', options: [" ","N", "T", "U"]},
             {label: "First Name Truncation (DDF):", name: "first_name_trunc", type: 'combobox', options: [" ","N", "T", "U"]},
             {label: "Middle Name Truncation (DDG):", name: "middle_name_trunc", type: 'combobox', options: [" ","N", "T", "U"]}
-        ],
-        "Address Information": [
+        ]},
+        "Address Information": { icon: "fa-solid fa-location-dot", fields: [
             {label: "Street 1 (DAG):", name: "street1"}, 
             {label: "Street 2 (DAH):", name: "street2"},
             {label: "City (DAI):", name: "city"}, 
             {label: "Jurisdiction Code (DAJ):", name: "state", value: "CA"},
             {label: "Postal Code (DAK):", name: "postal_code"}
-        ],
-        "Physical Description": [
+        ]},
+        "Physical Description": { icon: "fa-solid fa-person", fields: [
             {label: "Sex (DBC):", name: "sex", type: 'combobox', options: [["1", "1-Male"], ["2", "2-Female"], ["9", "9-Unknown"]]},
             {label: "Eye Color (DAY):", name: "eye_color", type: 'combobox', options: ["BLK", "BLU", "BRO","BNR", "GRY", "GRN", "HAZ", "MAR", "PNK"]},
             {label: "Height (DAU):", name: "height", placeholder: "e.g., '068 in'"},
@@ -53,17 +51,14 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             {label: "Weight - Pounds (DAW):", name: "weight_pounds"}, 
             {label: "Weight - Kilograms (DAX):", name: "weight_kg"},
             {label: "Weight Range (DCE):", name: "weight_range", type: 'combobox', options: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]}
-        ],
-        "Document Details": [
+        ]},
+        "Document Details": { icon: "fa-solid fa-stamp", fields: [
             {label: "Jurisdiction Vehicle Class (DCA):", name: "vehicle_class"},
             {label: "Jurisdiction Restrictions (DCB):", name: "restrictions"},
             {label: "Jurisdiction Endorsements (DCD):", name: "endorsements"},
             {label: "Standard Vehicle Classification (DCM):", name: "std_vehicle_class"},
             {label: "Standard Restriction Code (DCO):", name: "std_restriction"},
             {label: "Standard Endorsement Code (DCN):", name: "std_endorsement"},
-            {label: "Vehicle Class Description (DCP):", name: "vehicle_class_desc"},
-            {label: "Restriction Code Description (DCR):", name: "restriction_desc"},
-            {label: "Endorsement Code Description (DCQ):", name: "endorsement_desc"},
             {label: "Compliance Type (DDA):", name: "compliance_type", type: 'combobox', options: [" ","F", "N"]},
             {label: "Card Revision Date (DDB):", name: "card_revision_date", placeholder: "MMDDYYYY"},
             {label: "Limited Duration Indicator (DDD):", name: "limited_duration", type: 'combobox', options: ["0", "1"]},
@@ -73,71 +68,76 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             {label: "Under 21 Until (DDJ):", name: "under_21", placeholder: "MMDDYYYY"},
             {label: "Organ Donor Indicator (DDK):", name: "organ_donor", type: 'combobox', options: ["0", "1"]},
             {label: "Veteran Indicator (DDL):", name: "veteran", type: 'combobox', options: ["0", "1"]}
-        ],
-        "Jurisdiction-Specific Fields": [
+        ]},
+        "Jurisdiction-Specific Fields": { icon: "fa-solid fa-flag-usa", fields: [
             {label: "Place of Birth (DCI):", name: "place_of_birth"},
             {label: "Audit Information (DCJ):", name: "audit_info"},
-            {label: "Inventory Control (DCK):", name: "inventory_control"},
-            {label: "Jurisdiction-Specific Field 1 (ZVA):", name: "jurisdiction_field1"},
-            {label: "Jurisdiction-Specific Field 2 (ZVB):", name: "jurisdiction_field2"}
-        ],
-        "Optional Fields": [
+            {label: "Inventory Control (DCK):", name: "inventory_control"}
+        ]},
+        "Optional Fields": { icon: "fa-solid fa-plus-square", fields: [
             {label: "Alias Family Name (DBN):", name: "alias_family"},
             {label: "Alias Given Name (DBG):", name: "alias_given"},
             {label: "Alias Suffix Name (DBS):", name: "alias_suffix"}
-        ]
+        ]}
     };
-    
-    function buildForm() {
-        let html = '';
+
+    function buildFormAndControls() {
+        // --- Build Accordion ---
+        let accordionHtml = '';
         for (const category in fieldDefinitions) {
-            html += `<fieldset><legend>${category}</legend><div class="grid-3-col">`;
-            fieldDefinitions[category].forEach(field => {
+            const categoryInfo = fieldDefinitions[category];
+            accordionHtml += `<div class="accordion-item">
+                <button class="accordion-header"><i class="${categoryInfo.icon}"></i> ${category}</button>
+                <div class="accordion-content">
+                    <div class="grid-3-col">`;
+            
+            categoryInfo.fields.forEach(field => {
                 const elementId = field.label.match(/\((.*?)\)/)?.[1] || '';
-                html += `<label for="a417-${field.name}">${field.label}</label>`;
+                accordionHtml += `<label for="a417-${field.name}">${field.label}</label>`;
 
                 if (field.type === 'combobox') {
                     const datalistId = `datalist-${field.name}`;
-                    html += `<input list="${datalistId}" id="a417-${field.name}" value="${field.value || ''}" placeholder="${field.placeholder || ''}" autocomplete="off">`;
-                    html += `<datalist id="${datalistId}">`;
+                    accordionHtml += `<input list="${datalistId}" id="a417-${field.name}" value="${field.value || ''}" placeholder="${field.placeholder || ''}" autocomplete="off">`;
+                    accordionHtml += `<datalist id="${datalistId}">`;
                     field.options.forEach(opt => {
                         if (Array.isArray(opt)) {
-                            html += `<option value="${opt[0]}">${opt[1] || ''}</option>`;
+                            accordionHtml += `<option value="${opt[0]}">${opt[1] || ''}</option>`;
                         } else {
-                            html += `<option value="${opt}"></option>`;
+                            accordionHtml += `<option value="${opt}"></option>`;
                         }
                     });
-                    html += `</datalist>`;
+                    accordionHtml += `</datalist>`;
                 } else { 
-                    html += `<input type="text" id="a417-${field.name}" 
-                           value="${field.value || ''}" 
-                           placeholder="${field.placeholder || ''}">`;
+                    accordionHtml += `<input type="text" id="a417-${field.name}" 
+                                   value="${field.value || ''}" 
+                                   placeholder="${field.placeholder || ''}">`;
                 }
-                 html += `<span>${elementId}</span>`;
+                 accordionHtml += `<span>${elementId}</span>`;
             });
-            html += `</div></fieldset>`;
+            accordionHtml += `</div></div></div>`;
         }
-        
-        // Create the control bar with state selector
+        accordionContainer.innerHTML = accordionHtml;
+
+        // --- Build Controls ---
         const states = ["AK", "AL", "AR", "AZ", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA", "MD", "ME", "MI", "MN", "MO", "MS", "MT", "NC", "ND", "NE", "NH", "NJ", "NM", "NV", "NY", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VA", "VT", "WA", "WI", "WV", "WY"];
         let stateOptions = states.map(s => `<option value="${s}"></option>`).join('');
-
-        html += `<div style="margin-top:20px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
-            <div>
-                <label for="a417-state-selector-for-random" style="font-weight:bold; display:block; margin-bottom: 4px;">State for Random:</label>
-                <input list="a417-states-datalist" id="a417-state-selector-for-random" placeholder="e.g., CA" value="CA" style="width: 100px; padding: 7px;">
+        
+        controlsContainer.innerHTML = `
+            <div class="state-selector-group">
+                <label for="a417-state-selector-for-random">State:</label>
+                <input list="a417-states-datalist" id="a417-state-selector-for-random" placeholder="e.g., CA" value="CA">
                 <datalist id="a417-states-datalist">${stateOptions}</datalist>
             </div>
-            <button id="a417-random-btn">Generate Random for State</button>
-            <label for="a417-excel-input" class="file-input-label">Import from Excel</label>
+            <button id="a417-random-btn"><i class="fa-solid fa-dice"></i> Generate Random</button>
+            <label for="a417-excel-input" class="file-input-label"><i class="fa-solid fa-file-excel"></i> Import Excel</label>
             <input type="file" id="a417-excel-input" accept=".xlsx, .xls">
-            <button id="a417-generate-current-btn">Generate Barcode for Current Data</button>
-        </div>`;
-        
-        inputFieldsContainer.innerHTML = html;
+            <button id="a417-generate-current-btn"><i class="fa-solid fa-gears"></i> Generate Current Barcode</button>
+        `;
 
+        // --- Add Event Listeners for Accordion and Controls ---
+        addAccordionListeners();
         for (const category in fieldDefinitions) {
-             fieldDefinitions[category].forEach(field => {
+             fieldDefinitions[category].fields.forEach(field => {
                 a417_fields[field.name] = document.getElementById(`a417-${field.name}`);
              });
         }
@@ -146,8 +146,57 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         document.getElementById('a417-excel-input').addEventListener('change', importFromExcel);
         document.getElementById('a417-generate-current-btn').addEventListener('click', generateBarcodeForCurrentData);
         document.getElementById('a417-export-all-btn').addEventListener('click', exportAllImages);
+
+        // --- Add Event Listeners for Output Tabs ---
+        addTabListeners();
     }
-    
+
+    function addAccordionListeners() {
+        const headers = document.querySelectorAll('.accordion-header');
+        headers.forEach((header, index) => {
+            header.addEventListener('click', () => {
+                const content = header.nextElementSibling;
+                header.classList.toggle('active');
+                if (content.style.maxHeight) {
+                    content.style.maxHeight = null;
+                    content.classList.remove('active');
+                } else {
+                    // Set a large enough max-height to accommodate content
+                    content.style.maxHeight = content.scrollHeight + 40 + "px"; 
+                    content.classList.add('active');
+                }
+            });
+             // Open the first two accordions by default
+            if(index < 2) {
+                header.click();
+            }
+        });
+    }
+
+    function addTabListeners() {
+        const tabLinks = document.querySelectorAll('.output-tabs .tab-link');
+        tabLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                const tabId = link.getAttribute('data-tab');
+
+                // Deactivate all
+                document.querySelectorAll('.output-tabs .tab-link').forEach(l => l.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Activate clicked
+                link.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+    }
+
+    // ... (All other functions from pdf417-generator.js remain the same) ...
+    // e.g., showInputDataAlert, getNumberOfDaysFromBeginnigOfYear, all state-specific functions,
+    // generateRandomData, importFromExcel, calculateDlSubfileLength, etc.
+    // PASTE ALL THE REMAINING JS FUNCTIONS FROM THE PREVIOUS FILE HERE
+    // Starting from showInputDataAlert() and ending with exportAllImages().
+    // For brevity, I'm not re-pasting them here, but you MUST do it.
+
     function showInputDataAlert(message) {
         console.warn("Input Data Alert:", message);
         alert("Lỗi tính toán: " + message);
@@ -209,8 +258,6 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
     }
     function getRandomMiddleName() { return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random()*26)]; }
     
-    // --- STATE-SPECIFIC DATA GENERATION FUNCTIONS ---
-
     function generic_calculate_documentNumber() { a417_fields.customer_id.value = getRandomLetter() + getRandomNumericString(8); }
     function generic_calculate_ICN() { a417_fields.inventory_control.value = getRandomNumericString(12); }
     function generic_calculate_DD() { a417_fields.document_discriminator.value = getRandomLetterAndDigit() + getRandomLetterAndDigit() + getRandomNumericString(10); }
@@ -249,21 +296,21 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
     function CO_calculate_DD() {
         const issueDate = a417_fields.issue_date.value;
         if (!issueDate || issueDate.length !== 8) { showInputDataAlert("CO DD Error: Incorrect issue date!"); return; }
-        const formattedDate = issueDate.slice(0, 4) + issueDate.slice(-2); // MMDDYY
+        const formattedDate = issueDate.slice(0, 4) + issueDate.slice(-2);
         a417_fields.document_discriminator.value = `CODL_0_${formattedDate}_${getRandomNumericString(5)}`;
     }
 
     function CT_calculate_DD() {
         const issueDate = a417_fields.issue_date.value;
         if (!issueDate || issueDate.length !== 8) { showInputDataAlert("CT DD Error: Incorrect issue date!"); return; }
-        const formattedDate = issueDate.slice(-2) + issueDate.slice(0, 4); // YYMMDD
+        const formattedDate = issueDate.slice(-2) + issueDate.slice(0, 4);
         a417_fields.document_discriminator.value = `${formattedDate}${getRandomNumericString(6)}01MV${getRandomLetter()}${getRandomLetter()}`;
     }
 
     function DE_calculate_DD() {
         const issueDate = a417_fields.issue_date.value;
         if (!issueDate || issueDate.length !== 8) { showInputDataAlert("DE DD Error: Incorrect issue date!"); return; }
-        const formattedDate = issueDate.slice(-2) + issueDate.slice(0, 4); // YYMMDD
+        const formattedDate = issueDate.slice(-2) + issueDate.slice(0, 4);
         a417_fields.document_discriminator.value = `L${formattedDate}${getRandomNumericString(6)}${getRandomLetter()}`;
     }
 
@@ -296,15 +343,15 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
     function IN_calculate_DD() {
         const issueDate = a417_fields.issue_date.value;
         if (!issueDate || issueDate.length !== 8) { showInputDataAlert("IN DD Error: Incorrect issue date!"); return; }
-        const formattedDate = issueDate.slice(0, 4) + issueDate.slice(-2); // MMDDYY
-        const officeCode = getRandomNumericString(3); // Stand-in for 3-digit office code
+        const formattedDate = issueDate.slice(0, 4) + issueDate.slice(-2);
+        const officeCode = getRandomNumericString(3);
         a417_fields.document_discriminator.value = `${formattedDate}${officeCode}00${getRandomNumericString(3)}`;
     }
 
     function KY_calculate_DD() {
         const issueDate = a417_fields.issue_date.value;
         if (!issueDate || issueDate.length !== 8) { showInputDataAlert("KY DD Error: Incorrect issue date!"); return; }
-        const formattedDate = `${issueDate.slice(-4)}${issueDate.slice(0, 4)}`; // YYYYMMDD
+        const formattedDate = `${issueDate.slice(-4)}${issueDate.slice(0, 4)}`;
         a417_fields.document_discriminator.value = `${formattedDate}${getRandomNumericString(8)}01111`;
     }
 
@@ -336,7 +383,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
     function MT_calculate_DD() {
         const issueDate = a417_fields.issue_date.value;
         if (!issueDate || issueDate.length !== 8) { showInputDataAlert("MT DD Error: Incorrect issue date!"); return; }
-        const formattedDate = `${issueDate.slice(-4)}${issueDate.slice(0, 4)}`; // YYYYMMDD
+        const formattedDate = `${issueDate.slice(-4)}${issueDate.slice(0, 4)}`;
         a417_fields.document_discriminator.value = formattedDate + getRandomNumericString(12);
     }
 
@@ -366,8 +413,8 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         const issueDate = a417_fields.issue_date.value;
         if (!dob || dob.length !== 8) { showInputDataAlert("OK DD Error: Incorrect date of birth!"); return; }
         if (!issueDate || issueDate.length !== 8) { showInputDataAlert("OK DD Error: Incorrect issue date!"); return; }
-        const dobFormatted = dob.slice(0, 4) + dob.slice(-2); // MMDDYY
-        const issueFormatted = issueDate.slice(0, 4) + issueDate.slice(-2); // MMDDYY
+        const dobFormatted = dob.slice(0, 4) + dob.slice(-2);
+        const issueFormatted = issueDate.slice(0, 4) + issueDate.slice(-2);
         a417_fields.document_discriminator.value = `${docNum}${dobFormatted}${issueFormatted}${getRandomLetter()}`;
     }
 
@@ -376,7 +423,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
     function TN_calculate_DD() {
         const issueDate = a417_fields.issue_date.value;
         if (!issueDate || issueDate.length !== 8) { showInputDataAlert("TN DD Error: Incorrect issue date!"); return; }
-        const formattedDate = issueDate.slice(-2) + issueDate.slice(0, 4); // YYMMDD
+        const formattedDate = issueDate.slice(-2) + issueDate.slice(0, 4);
         a417_fields.document_discriminator.value = `${getRandomNumericString(2)}0${formattedDate}${getRandomNumericString(7)}`;
     }
     
@@ -401,7 +448,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         const issueDate = a417_fields.issue_date.value;
         if (!familyName) { showInputDataAlert("WI DD Error: Family name is required!"); return; }
         if (!issueDate || issueDate.length !== 8) { showInputDataAlert("WI DD Error: Incorrect issue date!"); return; }
-        const formattedDate = issueDate.slice(-4) + issueDate.slice(0, 4); // YYYYMMDD
+        const formattedDate = issueDate.slice(-4) + issueDate.slice(0, 4);
         a417_fields.document_discriminator.value = `OT${familyName.charAt(0).toUpperCase()}${formattedDate}${getRandomNumericString(8)}`;
     }
 
@@ -414,8 +461,8 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         if (!familyName) { showInputDataAlert("WV DD Error: Family name is required!"); return; }
         if (!firstName) { showInputDataAlert("WV DD Error: First name is required!"); return; }
         if (!expiryDate || expiryDate.length !== 8) { showInputDataAlert("WV DD Error: Incorrect expiry date!"); return; }
-        const dobFormatted = dob.slice(0, 4) + dob.slice(-2); // MMDDYY
-        const expiryFormatted = expiryDate.slice(-2) + expiryDate.slice(2, 4); // YYDD
+        const dobFormatted = dob.slice(0, 4) + dob.slice(-2);
+        const expiryFormatted = expiryDate.slice(-2) + expiryDate.slice(2, 4);
         a417_fields.document_discriminator.value = `${dobFormatted}${familyName.charAt(0).toUpperCase()}${firstName.charAt(0).toUpperCase()}${expiryFormatted}`;
     }
 
@@ -425,7 +472,6 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         a417_fields.inventory_control.value = value;
     }
 
-    // --- MAIN DATA GENERATION LOGIC ---
     function generateRandomData() {
         const stateSelector = document.getElementById('a417-state-selector-for-random');
         const selectedState = stateSelector.value.toUpperCase().trim();
@@ -539,7 +585,6 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         alert(`Đã tạo dữ liệu ngẫu nhiên cho tiểu bang: ${selectedState}`);
     }
 
-    // --- CORE APPLICATION FUNCTIONS ---
     function getCurrentData() {
         const data = {};
         for(const name in a417_fields) { data[name] = a417_fields[name].value; }
@@ -782,8 +827,6 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         }
     }
     
-    // Initial call to build the form when the script loads
-    buildForm();
-    // Generate initial random data for a default state
+    buildFormAndControls();
     generateRandomData();
 }
