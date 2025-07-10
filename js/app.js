@@ -1,7 +1,6 @@
 // js/app.js
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- GLOBAL APP SWITCHER LOGIC ---
     const switchTo417Btn = document.getElementById('switch-to-417');
     const switchTo128Btn = document.getElementById('switch-to-128');
     const app417Container = document.getElementById('app-417-container');
@@ -24,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
     switchTo417Btn.addEventListener('click', () => switchApp('417'));
     switchTo128Btn.addEventListener('click', () => switchApp('128'));
     
-    // --- GLOBAL HELPER FUNCTION ---
     async function exportCanvasesToDirectory(canvases, filenames) {
         if (canvases.length === 0) {
             alert("Không có ảnh nào để xuất.");
@@ -75,11 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- INITIALIZE GENERATOR MODULES ---
-    // Pass the shared helper function to the modules that need it.
     initializePdf417Generator(exportCanvasesToDirectory);
     initializeCode128Generator(exportCanvasesToDirectory);
 
-    // Set the initial active app
     switchApp('417');
 });

@@ -1,39 +1,161 @@
 // js/code128-generator.js
 function initializeCode128Generator(exportCanvasesToDirectory) {
-    // This is a self-contained module for the Code128 generator.
-    
-    const fileInput = document.getElementById('a128-file-input');
+    // --- UI Elements ---
+    const getIcnBtn = document.getElementById('a128-get-icn-btn');
+    const generateBtn = document.getElementById('a128-generate-btn');
     const saveAllBtn = document.getElementById('a128-save-all-btn');
-    const statusLabel = document.getElementById('a128-status-label');
-    const progressBar = document.getElementById('a128-progress-bar');
+    const fileInput = document.getElementById('a128-file-input');
+    const filenameInput = document.getElementById('a128-filename-input');
+    const icnInput = document.getElementById('a128-icn-input');
     const recordsTableBody = document.getElementById('a128-records-table-body');
     const barcodePreview = document.getElementById('a128-barcode-preview');
-    let a128_barcode_data = [];
-    let a128_barcode_images = {};
+    
+    // --- Data Storage ---
+    let barcodeRecords = []; // Single source of truth for all records
 
+    // --- Event Listeners ---
+    getIcnBtn.addEventListener('click', getIcnFromPdf417Tab);
+    generateBtn.addEventListener('click', addSingleRecordFromInputs);
     fileInput.addEventListener('change', handleFileImport);
     saveAllBtn.addEventListener('click', saveAllBarcodes);
-    
-    function resetUI() {
-        fileInput.disabled = false;
-        fileInput.value = '';
-        if (Object.keys(a128_barcode_images).length > 0) {
-            saveAllBtn.disabled = false;
-            statusLabel.textContent = `Completed! Ready to save ${Object.keys(a128_barcode_images).length} images.`;
+
+    /**
+     * Fetches ICN and DL Number from the PDF417 tab to populate the inputs.
+     */
+    function getIcnFromPdf417Tab() {
+        const pdf417IcnField = document.getElementById('a417-inventory_control');
+        const pdf417DlNumField = document.getElementById('a417-customer_id');
+
+        if (pdf417IcnField && pdf417DlNumField) {
+            const icnValue = pdf417IcnField.value;
+            const dlNumValue = pdf417DlNumField.value;
+            
+            if (icnValue) {
+                icnInput.value = icnValue;
+            } else {
+                alert("Inventory Control Number (ICN) is empty on the PDF417 tab. Please generate or enter it first.");
+                return;
+            }
+
+            if (dlNumValue) {
+                filenameInput.value = dlNumValue;
+            }
         } else {
-            saveAllBtn.disabled = true;
-            statusLabel.textContent = 'Ready to import file.';
+            alert("Could not find the necessary fields on the PDF417 tab.");
         }
     }
 
+    /**
+     * Handles the "Add to List" button click for manual entry.
+     */
+    function addSingleRecordFromInputs() {
+        const icn = icnInput.value.trim();
+        let filename = filenameInput.value.trim();
+        
+        if (!icn) {
+            alert("ICN (Code 128 Data) cannot be empty.");
+            icnInput.focus();
+            return;
+        }
+
+        if (!filename) {
+            filename = icn; // Default filename to ICN if empty
+        }
+
+        // Use the core function to add the record
+        addRecord(filename, icn);
+        
+        // Clear inputs for the next entry
+        filenameInput.value = '';
+        icnInput.value = '';
+        filenameInput.focus();
+    }
+
+    /**
+     * Core function to add a new barcode record to the list,
+     * whether from manual input or Excel.
+     * @param {string} filename - The name for the barcode file.
+     * @param {string} icn - The data for the barcode.
+     */
+    function addRecord(filename, icn) {
+        const canvas = generateBarcodeCanvas(icn);
+        if (!canvas) {
+            console.error(`Failed to generate barcode for ICN: ${icn}. Skipping.`);
+            return; // Skip adding if canvas generation fails
+        }
+        
+        barcodeRecords.push({ filename, icn, canvas });
+        updateRecordsTable();
+        saveAllBtn.disabled = false;
+    }
+
+    /**
+     * Generates a barcode image on a canvas element.
+     * @param {string} text - The data to encode in the barcode.
+     * @returns {HTMLCanvasElement|null} The canvas element or null on error.
+     */
+    function generateBarcodeCanvas(text) {
+        const showText = document.getElementById('a128-show-text-check').checked;
+        const height = parseInt(document.getElementById('a128-height-input').value) || 120;
+        
+        const canvas = document.createElement('canvas');
+        try {
+            bwipjs.toCanvas(canvas, {
+                bcid: 'code128',
+                text: text,
+                height: height / 10,
+                includetext: showText,
+                textxalign: 'center',
+            });
+            return canvas;
+        } catch (e) {
+            console.error(`Barcode generation error for "${text}":`, e);
+            return null;
+        }
+    }
+
+    /**
+     * Clears and redraws the entire records table based on the barcodeRecords array.
+     */
+    function updateRecordsTable() {
+        recordsTableBody.innerHTML = '';
+        barcodeRecords.forEach((record, index) => {
+            const tr = document.createElement('tr');
+            tr.dataset.index = index;
+            tr.innerHTML = `<td>${record.filename}.png</td><td>${record.icn}</td>`;
+            
+            tr.addEventListener('click', () => {
+                Array.from(recordsTableBody.children).forEach(row => row.classList.remove('selected'));
+                tr.classList.add('selected');
+                showPreview(index);
+            });
+            recordsTableBody.appendChild(tr);
+        });
+    }
+
+    /**
+     * Displays the preview of the selected barcode.
+     * @param {number} index - The index of the record in the barcodeRecords array.
+     */
+    function showPreview(index) {
+        const record = barcodeRecords[index];
+        if (record && record.canvas) {
+            barcodePreview.innerHTML = '';
+            const img = document.createElement('img');
+            img.src = record.canvas.toDataURL();
+            barcodePreview.appendChild(img);
+        } else {
+            barcodePreview.innerHTML = '<p>Error generating barcode for this record.</p>';
+        }
+    }
+    
+    /**
+     * Handles the file import process from Excel.
+     */
     async function handleFileImport(event) {
         const file = event.target.files[0];
         if (!file) return;
-        fileInput.disabled = true;
-        saveAllBtn.disabled = true;
-        recordsTableBody.innerHTML = '';
-        a128_barcode_data = [];
-        a128_barcode_images = {};
+
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
@@ -41,77 +163,37 @@ function initializeCode128Generator(exportCanvasesToDirectory) {
                 const workbook = XLSX.read(data, { type: 'array' });
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "", header: ['Filename', 'Code128'], raw: false });
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: ['Filename', 'Code128'] });
+                
                 if (jsonData[0] && jsonData[0].Filename === 'Filename' && jsonData[0].Code128 === 'Code128') {
                     jsonData.shift();
                 }
-                a128_barcode_data = jsonData.filter(row => row.Filename && row.Code128);
-                if (a128_barcode_data.length === 0) {
+
+                const validData = jsonData.filter(row => row.Filename && row.Code128);
+                if (validData.length === 0) {
                     alert("No valid data found in 'Filename' and 'Code128' columns.");
-                    resetUI();
                     return;
                 }
-                await generateAllBarcodes();
+                
+                let addedCount = 0;
+                validData.forEach(row => {
+                    addRecord(String(row.Filename).trim(), String(row.Code128).trim());
+                    addedCount++;
+                });
+
+                alert(`Successfully added ${addedCount} records from the Excel file.`);
+
             } catch (err) {
-                console.error(err);
+                console.error("Error processing Excel file:", err);
                 alert("Error processing Excel file: " + err.message);
-                resetUI();
+            } finally {
+                fileInput.value = '';
             }
         };
         reader.readAsArrayBuffer(file);
     }
     
-    async function generateAllBarcodes() {
-        statusLabel.textContent = `Found ${a128_barcode_data.length} records. Generating...`;
-        progressBar.max = a128_barcode_data.length;
-        progressBar.value = 0;
-        const showText = document.getElementById('a128-show-text-check').checked;
-        const height = parseInt(document.getElementById('a128-height-input').value) || 120;
-        for (let i = 0; i < a128_barcode_data.length; i++) {
-            const record = a128_barcode_data[i];
-            const tr = document.createElement('tr');
-            tr.dataset.index = i;
-            tr.innerHTML = `<td>${record.Filename}</td><td>${record.Code128}</td><td class="status">Generating...</td>`;
-            recordsTableBody.appendChild(tr);
-            tr.addEventListener('click', () => onRecordSelect(i));
-            try {
-                const canvas = document.createElement('canvas');
-                await new Promise((resolve, reject) => {
-                     try {
-                        bwipjs.toCanvas(canvas, {
-                            bcid: 'code128', text: record.Code128,
-                            height: height / 10, includetext: showText, textxalign: 'center',
-                        });
-                        a128_barcode_images[i] = canvas;
-                        tr.querySelector('.status').textContent = 'Success';
-                        resolve();
-                    } catch(bwipError) { reject(bwipError); }
-                });
-            } catch (err) {
-                console.error(`Error generating barcode for "${record.Code128}":`, err);
-                tr.querySelector('.status').textContent = 'Error';
-                a128_barcode_images[i] = null;
-            }
-            progressBar.value = i + 1;
-        }
-        alert(`Finished generating ${a128_barcode_data.length} barcodes.`);
-        resetUI();
-    }
-
-    function onRecordSelect(index) {
-        Array.from(recordsTableBody.children).forEach(row => row.classList.remove('selected'));
-        recordsTableBody.querySelector(`[data-index='${index}']`).classList.add('selected');
-        const canvas = a128_barcode_images[index];
-        if (canvas) {
-            barcodePreview.innerHTML = '';
-            const img = document.createElement('img');
-            img.src = canvas.toDataURL();
-            barcodePreview.appendChild(img);
-        } else {
-            barcodePreview.innerHTML = '<p>Error generating barcode for this record.</p>';
-        }
-    }
-    
+    // --- Save Logic ---
     function _makeBackgroundTransparent(canvas) {
         const newCanvas = document.createElement('canvas');
         newCanvas.width = canvas.width;
@@ -130,7 +212,7 @@ function initializeCode128Generator(exportCanvasesToDirectory) {
     }
 
     async function saveAllBarcodes() {
-        if (Object.keys(a128_barcode_images).length === 0) {
+        if (barcodeRecords.length === 0) {
             alert("No barcodes have been generated yet.");
             return;
         }
@@ -139,15 +221,13 @@ function initializeCode128Generator(exportCanvasesToDirectory) {
         const canvasesToExport = [];
         const filenamesToExport = [];
 
-        for (const index in a128_barcode_images) {
-            let canvas = a128_barcode_images[index];
+        for (const record of barcodeRecords) {
+            let canvas = record.canvas;
             if (canvas) {
                 if (isTransparent) {
                     canvas = _makeBackgroundTransparent(canvas);
                 }
-                const record = a128_barcode_data[index];
-                const sanitizedFilename = record.Filename.replace(/[\\/*?:"<>|]/g, "_");
-                
+                const sanitizedFilename = record.filename.replace(/[\\/*?:"<>|]/g, "_");
                 canvasesToExport.push(canvas);
                 filenamesToExport.push(`${sanitizedFilename}.png`);
             }

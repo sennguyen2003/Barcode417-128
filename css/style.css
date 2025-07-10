@@ -131,6 +131,12 @@ button:disabled {
     justify-content: center;
     margin-top: 15px;
 }
+.button-primary {
+    background-image: linear-gradient(to bottom, var(--success-color), #27ae60);
+}
+.button-primary:hover {
+    background-image: linear-gradient(to bottom, #58d68d, #2ecc71);
+}
 
 .file-input-label { background-image: linear-gradient(to bottom, #95a5a6, #7f8c8d); }
 .file-input-label:hover { background-image: linear-gradient(to bottom, #aab5b6, #8e9a9b); }
@@ -172,7 +178,7 @@ hr { border: 0; height: 1px; background-color: var(--border-color); margin: 15px
 .data-table tbody tr:hover { background-color: #f1f5f8; }
 .data-table tbody tr.selected { background-color: var(--selected-row); font-weight: 500; }
 
-/* --- PDF417 Specifics: Accordion --- */
+/* --- PDF417 Specifics: Accordion & Controls --- */
 #a417-input-panel {
     display: flex;
     flex-direction: column;
@@ -226,7 +232,7 @@ hr { border: 0; height: 1px; background-color: var(--border-color); margin: 15px
 .accordion-header .fa-solid { margin-right: 10px; }
 .accordion-header:hover { background-color: #e9ecef; }
 .accordion-header::after {
-    content: '\f078'; /* Font Awesome chevron-down */
+    content: '\f078';
     font-family: 'Font Awesome 6 Free';
     font-weight: 900;
     transition: transform 0.3s ease;
@@ -245,6 +251,31 @@ hr { border: 0; height: 1px; background-color: var(--border-color); margin: 15px
 }
 .accordion-content .grid-3-col label {
     font-weight: 500;
+}
+.label-with-calculator {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+.field-calculator-btn {
+    background-image: none;
+    background-color: #ecf0f1;
+    color: var(--text-light);
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 14px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    flex-shrink: 0;
+    margin-left: 10px;
+}
+.field-calculator-btn:hover {
+    background-color: #e0e5e8;
+    color: var(--primary-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    transform: translateY(0);
 }
 
 /* --- PDF417 Specifics: Output Tabs --- */
@@ -275,11 +306,6 @@ hr { border: 0; height: 1px; background-color: var(--border-color); margin: 15px
 #a417-barcode-preview img { max-width: 100%; height: auto; }
 
 /* --- Code128 Specifics --- */
-.status-bar { display: flex; align-items: center; gap: 15px; margin-top: 15px; padding: 0 10px; }
-progress { width: 100%; -webkit-appearance: none; appearance: none; }
-progress::-webkit-progress-bar { background-color: var(--border-color); border-radius: 5px; }
-progress::-webkit-progress-value { background-color: var(--success-color); border-radius: 5px; transition: width 0.3s; }
-
 .options-bar {
     display: flex;
     gap: 20px;
