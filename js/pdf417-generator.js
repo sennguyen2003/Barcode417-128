@@ -140,7 +140,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             <input type="file" id="a417-excel-input" accept=".xlsx, .xls">
             <button id="a417-generate-current-btn"><i class="fa-solid fa-gears"></i> Generate Barcode</button>
         `;
-
+ 
         addAccordionListeners();
         addFieldCalculatorListeners();
         
@@ -286,7 +286,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         const today = new Date();
         a417_fields.issue_date.value = getFormattedDate_MMDDYYYY(getRandomDateByYear(2020, today.getFullYear())); 
     };
-    const randomize_expiry_date = () => {
+        const randomize_expiry_date = () => {
         const issueDateStr = a417_fields.issue_date.value;
         if (!issueDateStr || issueDateStr.length !== 8) {
             randomize_issue_date();
@@ -303,18 +303,71 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         a417_fields.expiry_date.value = getFormattedDate_MMDDYYYY(expiryDate);
     };
 
-    // AL
-    const AL_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomNumericString(8); };
+/*
+ $$$$  $$      $$$$  $$$$$   $$$$  $$   $  $$$$ 
+$$  $$ $$     $$  $$ $$  $$ $$  $$ $$$ $$ $$  $$
+$$$$$$ $$     $$$$$$ $$$$$  $$$$$$ $$ $ $ $$$$$$
+$$  $$ $$     $$  $$ $$  $$ $$  $$ $$   $ $$  $$
+$$  $$ $$$$$$ $$  $$ $$$$$  $$  $$ $$   $ $$  $$
+*/
+
+// ============== ALABAMA (AL) ============== //    
+    // ALABAMA (AL) - UPDATED
+        // ALABAMA (AL) - UPDATED
+    const AL_calculate_documentNumber = () => {
+        a417_fields.customer_id.value = getRandomNumericString(8);
+    };
     const AL_calculate_ICN = () => {
-        const docNum = a417_fields.customer_id.value || getRandomNumericString(8);
-        if (!a417_fields.customer_id.value) a417_fields.customer_id.value = docNum;
+        const docNum = a417_fields.customer_id.value;
         const issueDate = a417_fields.issue_date.value;
-        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("AL ICN Error: Incorrect issue date!"); return; }
+        if (!docNum || docNum.length !== 8) {
+            showInputDataAlert("AL ICN Error: A valid 8-char Document Number is required!");
+            return;
+        }
+        if (!issueDate || issueDate.length !== 8) {
+            showInputDataAlert("AL ICN Error: Incorrect issue date!");
+            return;
+        }
         const days = ("00" + (parseInt(getNumberOfDaysFromBeginnigOfYear(issueDate)) + 4)).slice(-3);
         a417_fields.inventory_control.value = `${docNum}${getRandomNumericString(5)}${issueDate.slice(-2)}${days}01`;
     };
+    // --- NEW FUNCTION FOR ALABAMA'S EXPIRY DATE ---
+    const AL_calculate_expiry_date = () => {
+        const issueDateStr = a417_fields.issue_date.value;
+        if (!issueDateStr || issueDateStr.length !== 8) {
+            showInputDataAlert("AL Expiry Date Error: A valid Issue Date is required first.");
+            return;
+        }
+        const month = issueDateStr.slice(0, 2);
+        // Ensure day is at least '01' after subtracting
+        let day = parseInt(issueDateStr.slice(2, 4)) - 1;
+        if (day < 1) day = 1; 
+        const year = (parseInt(issueDateStr.slice(-4)) + 4).toString();
+        a417_fields.expiry_date.value = month + day.toString().padStart(2, '0') + year;
+    };
+    
+   /* const AL_calculate_ICN = () => {
+        const docNum = a417_fields.customer_id.value;
+        const issueDate = a417_fields.issue_date.value;
+        if (!docNum || docNum.length !== 8) {
+            showInputDataAlert("AL ICN Error: A valid 8-char Document Number is required!");
+            return;
+        }
+        if (!issueDate || issueDate.length !== 8) {
+            showInputDataAlert("AL ICN Error: Incorrect issue date!");
+            return;
+        }
+        const days = ("00" + (parseInt(getNumberOfDaysFromBeginnigOfYear(issueDate)) + 4)).slice(-3);
+        a417_fields.inventory_control.value = `${docNum}${getRandomNumericString(5)}${issueDate.slice(-2)}${days}01`;
+    };*/
 
-    // AK
+   /*
+ $$$$  $$      $$$$   $$$$  $$  $$  $$$$
+$$  $$ $$     $$  $$ $$     $$ $$  $$  $$
+$$$$$$ $$     $$$$$$  $$$$  $$$$   $$$$$$
+$$  $$ $$     $$  $$     $$ $$ $$  $$  $$
+$$  $$ $$$$$$ $$  $$  $$$$  $$  $$ $$  $$
+*/
    const AK_calculate_documentNumber = () => {
     a417_fields.customer_id.value = getRandomNumericString(7);
         };
@@ -343,8 +396,16 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         };
 
 
-       // ARIZONA (AZ) - UPDATED
-    const AZ_calculate_documentNumber = () => {
+/*
+ $$$$  $$$$$  $$$$$$ $$$$$$  $$$$  $$  $$  $$$$
+$$  $$ $$  $$   $$      $$  $$  $$ $$$ $$ $$  $$
+$$$$$$ $$$$$    $$     $$   $$  $$ $$ $$$ $$$$$$
+$$  $$ $$  $$   $$    $$    $$  $$ $$  $$ $$  $$
+$$  $$ $$  $$ $$$$$$ $$$$$$  $$$$  $$  $$ $$  $$
+*/
+
+// =============== ARIZONA (AZ) ============== //   
+ const AZ_calculate_documentNumber = () => {
         a417_fields.customer_id.value = "D" + getRandomNumericString(8);
     };
     const AZ_calculate_ICN = () => {
@@ -450,6 +511,29 @@ $$  $$ $$  $$ $$     $$  $$ $$  $$ $$  $$ $$  $$ $$  $$
     };
     const CO_calculate_DD = () => {
         a417_fields.document_discriminator.value = getRandomNumericString(7);
+
+    };
+     const CO_calculate_ICN = () => {
+        const issueDateStr = a417_fields.issue_date.value;
+        if (!issueDateStr || issueDateStr.length !== 8) {
+            showInputDataAlert("CO ICN calculation error: An incorrect issue date is provided!");
+            return;
+        }
+
+        const issueDate = new Date(
+            parseInt(issueDateStr.slice(4, 8)),
+            parseInt(issueDateStr.slice(0, 2)) - 1,
+            parseInt(issueDateStr.slice(2, 4))
+        );
+        issueDate.setDate(issueDate.getDate() + 1);
+
+        const month = (issueDate.getMonth() + 1).toString().padStart(2, '0');
+        const day = issueDate.getDate().toString().padStart(2, '0');
+        const year = issueDate.getFullYear().toString().slice(-2); // Get last 2 digits of year
+
+        const formattedDate = `${month}${day}${year}`; // MMDDYY format
+
+        a417_fields.inventory_control.value = `CODL_0_${formattedDate}_${getRandomNumericString(5)}`;
     };
     /*function CO_calculate_AUDIT() {
     var issueDate = document.getElementById("inputIssueDate").value;
@@ -1741,18 +1825,32 @@ $$$$$$   $$   $$  $$ $$   $   $$   $$  $$ $$  $$
             expiry_date: randomize_expiry_date,
         },
         specific: {
+            'CA': { 
+                customer_id: CA_calculate_documentNumber, 
+                inventory_control: CA_calculate_ICN, 
+                document_discriminator: CA_calculate_DD 
+            },
+            'CT': { 
+                customer_id: CT_calculate_documentNumber, 
+                inventory_control: CT_calculate_ICN, 
+                document_discriminator: CT_calculate_DD 
+            },
              'RI': { 
                 customer_id: RI_calculate_documentNumber, 
                 inventory_control: RI_calculate_ICN, 
                 document_discriminator: RI_calculate_DD 
             },
-            'MN': { 
+'AL': { 
+                customer_id: AL_calculate_documentNumber, 
+                inventory_control: AL_calculate_ICN,
+                expiry_date: AL_calculate_expiry_date // <-- THÊM DÒNG NÀY
+            },            'MN': { 
                 customer_id: MN_calculate_documentNumber,  inventory_control: MN_calculate_ICN, document_discriminator: MN_calculate_DD  },
            
             'AK': { customer_id: AK_calculate_documentNumber, inventory_control: AK_calculate_ICN, document_discriminator: AK_calculate_DD },
             'AR': { customer_id: AR_calculate_documentNumber, inventory_control: AR_calculate_ICN, document_discriminator: AR_calculate_DD },
             'AZ': { customer_id: AZ_calculate_documentNumber, inventory_control: AZ_calculate_ICN, document_discriminator: AZ_calculate_DD },            
-             'CO': { customer_id: CO_calculate_documentNumber, document_discriminator: CO_calculate_DD },
+             'CO': { customer_id: CO_calculate_documentNumber, document_discriminator: CO_calculate_DD,inventory_control: CO_calculate_ICN },
             'FL': { customer_id: FL_calculate_documentNumber, inventory_control: FL_calculate_ICN, document_discriminator: FL_calculate_DD },           
             'GA': { customer_id: GA_calculate_documentNumber, inventory_control: GA_calculate_ICN },
             'HI': { customer_id: HI_calculate_documentNumber, inventory_control: HI_calculate_ICN },
@@ -1795,7 +1893,8 @@ $$$$$$   $$   $$  $$ $$   $   $$   $$  $$ $$  $$
                 customer_id: NJ_calculate_documentNumber, 
                 inventory_control: NJ_calculate_ICN, 
                 document_discriminator: NJ_calculate_DD 
-            },            'NM': { customer_id: NM_calculate_documentNumber, inventory_control: NM_calculate_ICN },
+            },            
+            'NM': { customer_id: NM_calculate_documentNumber, inventory_control: NM_calculate_ICN },
  'NV': { 
                 customer_id: NV_calculate_documentNumber, 
                 inventory_control: NV_calculate_ICN, 
@@ -1813,11 +1912,17 @@ $$$$$$   $$   $$  $$ $$   $   $$   $$  $$ $$  $$
                 customer_id: OK_calculate_documentNumber, 
                 inventory_control: OK_calculate_ICN, 
                 document_discriminator: OK_calculate_DD 
-            },            'OR': { customer_id: OR_calculate_documentNumber, inventory_control: OR_calculate_ICN },
+            },           
+             'OR': { customer_id: OR_calculate_documentNumber, inventory_control: OR_calculate_ICN },
             'PA': { 
                 customer_id: PA_calculate_documentNumber, 
                 inventory_control: PA_calculate_ICN, 
                 document_discriminator: PA_calculate_DD },
+                  'DE': { 
+                customer_id: DE_calculate_documentNumber, 
+                inventory_control: DE_calculate_ICN, 
+                document_discriminator: DE_calculate_DD 
+            },
                         
                         'SD': { customer_id: SD_calculate_documentNumber, inventory_control: SD_calculate_ICN },
  'TN': { 
@@ -1833,17 +1938,18 @@ $$$$$$   $$   $$  $$ $$   $   $$   $$  $$ $$  $$
                 inventory_control: UT_calculate_ICN, 
                 document_discriminator: UT_calculate_DD 
             },           
-  'VA': { 
+            'VA': { 
                 customer_id: VA_calculate_documentNumber, 
                 inventory_control: VA_calculate_ICN, 
                 document_discriminator: VA_calculate_DD 
-            },            'VT': { customer_id: VT_calculate_documentNumber },
+            },            
+            'VT': { customer_id: VT_calculate_documentNumber },
              'WA': { 
                 customer_id: WA_calculate_documentNumber, 
                 inventory_control: WA_calculate_ICN, 
                 document_discriminator: WA_calculate_DD 
             },
-  'WI': { 
+            'WI': { 
                 customer_id: WI_calculate_documentNumber, 
                 inventory_control: WI_calculate_ICN, 
                 document_discriminator: WI_calculate_DD  },
