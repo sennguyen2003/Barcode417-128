@@ -1,40 +1,40 @@
--Alabama(NONE)- AL
--Alaska (DONE) - AK
--Arizona ((NONE)-AZ
--Arkansas (DONE)- AR
--California (DONE)- CA
--Colorado (DONE)-CO(CODL_0_+ Date of issue+1 day in MMDDYY format + " + 5 random digits. You can click on the calculator icon to calculate data automatically!)
--Connecticut (DONE)-CT(YYMMDD (Issue date) + 6 digits + 01MV + 2 character. You can click on the calculator icon to calculate DD automatically!)
--Delaware(DONE)-DE(L + issue datae (YYMMDD) + 6 digits + letter. You can click on the calculator icon to calculate DD automatically!)
-- Florida(DONE)-FL
--Idaho(DONE)-ID(15 digits. You can click on the calculator icon to calculate DD automatically!)
--Illinois(DONE)-IL
--Indiana(DONE)-IN(Issue date in MMDDYY format + 3 DL office codes(Located under the photo) + 00 + 3 digits. You can click on the calculator icon to calculate DD automatically!)
--Kentucky (DONE)-KY(Date of issue (YYYMMDD) + 8 random digits+ + + '01111'. You can click on the calculator icon to calculate DD automatically!)
--Maine(DONE)-ME(17 zeros + 8 digits. You can click on the calculator icon to calculate DD automatically!)
--Massachusetts (TẠM TẠM)-MA(Issue date + revision date You can click on the calculator icon to calculate DD automatically!)
-- Michigan (DONE)-MI(13 random numbers)
--Minnesota(DONE)-MN(7 zeros + 7 random digits. You can click on the calculator icon to calculate DD automatically!)
--Mississippi(NONE-X)-MS-> dựa vào Họ tên,ngày tháng ISS,EXP,BOD(22ký tự)
--Missouri(DONE)-MO(First 2 digits issue year (YY) + 14+4digits+00'+2 digits. You can click on the calculator icon to calculate DD automatically!)
--Montana(DONE)-MT(Issue data in YYYMMDD format + 12 digits. You can click on the calculator icon to calculate DD automatically!)
--Nebraska(NONE-X)-NE
--Nevada (DONE)-NV('0001' + 17 random digits. You can click on the calculator icon to calculate DD automatically!)
--New Hampshire (DONE TẠM VÌ PHỤ THUỘC VÀO ICN )-NH (0+7 random numbers)
--New Jersey(DONE)-NJ(Option 1 + issue year (YYY) + number of days from the beginnig of year to issue date + '0000' +4 digits. You can click on the calculator icon to calculate DD automatically!)
--New Mexico (NONE-X)-NM
--New York(DONE)-NY(10 random characters.You can click on the calculator icon to calculate DD automatically!)
--North Carolina(DONE TẠM vì n phụ thuộc vào ICN)-NC(001+7 random numbers)
--North Dakota(NONE-X)
--Ohio (DONE)-OH (0+ 8 random numbers)
--Oklahoma (DONE)-OK(Documunet number + Date of birth (MMDDYY) + issue date (MMDDYY) + letter. You can click on the calculator icon to calculate DD automatically!)
--Pennsylvania (NONE-X)-PA
--Rhode Island (DONE)-RI(7 random digits.You can click on the calculator icon to calculate DD automatically!)
--Tennessee (DONE)-TN
--Texas(TẠM TẠM)-TX(20 digits with custom algorithm. Please click on the calculator icon to calculate DD automatically!)
--Utah(DONE)-UT(8 random digits. You can click on the calculator icon to calculate DD automatically!)
--Virginia(DONE)-VA('O' + 8 digits. You can click on the calculator icon to calculate DD automatically!)
--Washington (NONE-X)-WA
-- West Virginia(DONE)-WV(Date of birth (MMDDYY) + First letter of last name + first letter of first name + expiry data (YYDD). You can click on the calculator icon to calculate DD automatically!)
--Wisconsin (DONE)-WI('OT + first letter of Last name + issue date (YYYMMDD) 8 digits. You can click on the calculator icon to calculate DD automatically!)
--Wyoming (DONE)-WY(10000 + 5 random digits)
+-Alabama(NONE-X)- AL-ICN(DONE)1 ko có DD1
+-Alaska (DONE) - AK-ICN(DONE)1
+-Arizona ((NONE)-AZ-ICN(DONE)
+-Arkansas (DONE)- AR-ICN(DONE)
+-California (DONE)- CA-ICN(DONE)
+-Colorado (DONE)-CO ( none ICN)-> ko có ICN 
+-Connecticut (DONE)-CT- ICN(DONE)
+-Delaware(DONE)-DE-ICN(DONE)
+- Florida(DONE)-FL-ICN(DONE)
+-Idaho(DONE)-ID- ICN(DONE)
+-Illinois(DONE)-IL-ICN(done)
+-Indiana(DONE)-IN(DONE)
+-Kentucky (DONE)-KY(DONE)
+-Maine(DONE)-ME(DONE)
+-Massachusetts (DONE)-ICN(DONE) MA(Issue date + revision date You can click on the calculator icon to calculate DD automatically!)
+- Michigan (DONE)-MI-ICN(DONE)(13 random numbers) (NOT DD)
+-Minnesota(DONE)-MN-ICN(DONE)(7 zeros + 7 random digits. You can click on the calculator icon to calculate DD automatically!)
+-Mississippi(DONE)-MS-ICN(DONE)> dựa vào Họ tên,ngày tháng ISS,EXP,BOD(22ký tự)
+-Missouri(DONE)-MO-ICN(DONE)(First 2 digits issue year (YY) + 14+4digits+00'+2 digits. You can click on the calculator icon to calculate DD automatically!)
+-Montana(DONE)-MT-ICN((DONE)(Issue data in YYYMMDD format + 12 digits. You can click on the calculator icon to calculate DD automatically!)
+-Nebraska(done)-NE-icn(DONE)
+-Nevada (DONE)-NV-ICN(DONE)('000 1' + 17 random digits. You can click on the calculator icon to calculate DD automatically!)
+-New Hampshire (DONE DD<ICN )-NH (0+7 random numbers)
+-New Jersey(DONE)-NJ-ICN(DONE)(Option 1 + issue year (YYY) + number of days from the beginnig of year to issue date + '0000' +4 digits. You can click on the calculator icon to calculate DD automatically!)
+-New Mexico-NM-ICN(DONE) ->NOT DD
+-New York(DONE)-NY->ICN(NOT)(10 random characters.You can click on the calculator icon to calculate DD automatically!)
+-North Carolina(DONE)-NC-ICN(DONE)(001+7 random numbers)
+-North Dakota(DONE,DD,ICN)-ND
+-Ohio (DONE)-OH-ICN(DONE) (0+ 8 random numbers)
+-Oklahoma (DONE)-OK-ICN(DONE)(Documunet number + Date of birth (MMDDYY) + issue date (MMDDYY) + letter. You can click on the calculator icon to calculate DD automatically!)
+-Pennsylvania (DONE DD,ICN, DL numbert)-PA
+-Rhode Island (DONE)-RI-ICN(DONE)(7 random digits.You can click on the calculator icon to calculate DD automatically!)
+-Tennessee (DONE)-TN-ICN(DONE)
+-Texas-TX-ICN(DONE)(20 digits with custom algorithm. Please click on the calculator icon to calculate DD automatically!)
+-Utah(DONE)-UT-ICN(DONE)(8 random digits. You can click on the calculator icon to calculate DD automatically!)
+-Virginia(DONE)-ICN(DONE)VA('O' + 8 digits. You can click on the calculator icon to calculate DD automatically!)
+-Washington (DONE DD,ICN)-WA
+- West Virginia(DONE)-WV-ICN(DONE)(Date of birth (MMDDYY) + First letter of last name + first letter of first name + expiry data (YYDD). You can click on the calculator icon to calculate DD automatically!)
+-Wisconsin (DONE)-WI-ICN(DONE)('OT + first letter of Last name + issue date (YYYMMDD) 8 digits. You can click on the calculator icon to calculate DD automatically!)
+-Wyoming (DONE)-iCN (DONE)WY(10000 + 5 random digits)

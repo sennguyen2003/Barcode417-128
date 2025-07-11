@@ -10,6 +10,20 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
     const a417_fields = {};
     let a417_all_records = [];
     let a417_barcode_images = {};
+        const STATE_IIN_MAP = {
+        'AL': '636033', 'AK': '636059', 'AZ': '636026', 'AR': '636021', 
+        'CA': '636014', 'CO': '636020', 'CT': '636006', 'DE': '636011',
+         'DC': '636043', 'FL': '636010', 'GA': '636055', 'HI': '636047', 
+         'ID': '636050', 'IL': '636035', 'IN': '636037', 'IA': '636018', 
+         'KS': '636022', 'KY': '636046', 'LA': '636007', 'ME': '636041', 
+         'MD': '636003', 'MA': '636002', 'MI': '636032', 'MN': '636038', 
+         'MS': '636051', 'MO': '636030', 'MT': '636008', 'NE': '636054', 
+         'NV': '636049', 'NH': '636039', 'NJ': '636036', 'NM': '636009', 
+         'NY': '636001', 'NC': '636004', 'ND': '636034', 'OH': '636023',
+          'OK': '636058', 'OR': '636029', 'PA': '636025', 'RI': '636052', 
+          'SC': '636005', 'SD': '636042', 'TN': '636053', 'TX': '636015', 'UT': '636040', 
+        'VT': '636024', 'VA': '636000', 'WA': '636045', 'WV': '636061', 'WI': '636031', 'WY': '636060'
+    };
 
     const fieldDefinitions = {
         "Header Information": { icon: "fa-solid fa-file-invoice", fields: [
@@ -82,6 +96,12 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
     };
 
     function buildFormAndControls() {
+            function updateIinBasedOnState() {
+        const selectedState = a417_fields.state.value.toUpperCase();
+        const iin = STATE_IIN_MAP[selectedState] || '636000'; // Fallback to a generic IIN
+        a417_fields.iin.value = iin;
+    }
+
         let accordionHtml = '';
         for (const category in fieldDefinitions) {
             const categoryInfo = fieldDefinitions[category];
@@ -156,6 +176,18 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         document.getElementById('a417-export-all-btn').addEventListener('click', exportAllImages);
         
         addTabListeners();
+                // --- ADDED FOR IIN AUTO-UPDATE ---
+        const stateSelector = document.getElementById('a417-state-selector-for-random');
+        stateSelector.addEventListener('change', () => {
+            // Update the main state field when the selector changes, then update IIN
+            a417_fields.state.value = stateSelector.value;
+            updateIinBasedOnState();
+        });
+        if (a417_fields.state) {
+            a417_fields.state.addEventListener('change', updateIinBasedOnState);
+        }
+        // --- END OF ADDED CODE ---
+
     }
 
     function addAccordionListeners() {
@@ -1974,6 +2006,7 @@ $$$$$$   $$   $$  $$ $$   $   $$   $$  $$ $$  $$
             return;
         }
         a417_fields.state.value = selectedState;
+        
 
         a417_fields.sex.value = Math.random() > 0.5 ? "1" : "2";
         fieldGenerators.generic.family_name();
@@ -2164,6 +2197,7 @@ $$$$$$   $$   $$  $$ $$   $   $$   $$  $$ $$  $$
         for(const name in a417_fields) {
             if(a417_fields[name]) a417_fields[name].value = recordData[name] || '';
         }
+        updateIinBasedOnState();
         if (canvas) {
             barcodePreview.innerHTML = '';
             const img = document.createElement('img');
