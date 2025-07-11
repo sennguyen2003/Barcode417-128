@@ -208,6 +208,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
                 header.click();
             }
         });
+        // SỬA LỖI 1: Xóa văn bản tiếng Việt và dấu ngoặc nhọn bị thừa ở đây
     }
 
     function addTabListeners() {
@@ -344,8 +345,6 @@ $$  $$ $$$$$$ $$  $$ $$$$$  $$  $$ $$   $ $$  $$
 */
 
 // ============== ALABAMA (AL) ============== //    
-    // ALABAMA (AL) - UPDATED
-        // ALABAMA (AL) - UPDATED
     const AL_calculate_documentNumber = () => {
         a417_fields.customer_id.value = getRandomNumericString(8);
     };
@@ -1845,7 +1844,7 @@ $$$$$$   $$   $$  $$ $$   $   $$   $$  $$ $$  $$
     };
     //--- END OF STATE-SPECIFIC GENERATORS ---
     
-    const fieldGenerators = {
+        const fieldGenerators = {
         generic: {
             customer_id: generic_calculate_documentNumber,
             document_discriminator: generic_calculate_DD,
@@ -1857,143 +1856,58 @@ $$$$$$   $$   $$  $$ $$   $   $$   $$  $$ $$  $$
             expiry_date: randomize_expiry_date,
         },
         specific: {
-            'CA': { 
-                customer_id: CA_calculate_documentNumber, 
-                inventory_control: CA_calculate_ICN, 
-                document_discriminator: CA_calculate_DD 
-            },
-            'CT': { 
-                customer_id: CT_calculate_documentNumber, 
-                inventory_control: CT_calculate_ICN, 
-                document_discriminator: CT_calculate_DD 
-            },
-             'RI': { 
-                customer_id: RI_calculate_documentNumber, 
-                inventory_control: RI_calculate_ICN, 
-                document_discriminator: RI_calculate_DD 
-            },
-'AL': { 
-                customer_id: AL_calculate_documentNumber, 
-                inventory_control: AL_calculate_ICN,
-                expiry_date: AL_calculate_expiry_date // <-- THÊM DÒNG NÀY
-            },            'MN': { 
-                customer_id: MN_calculate_documentNumber,  inventory_control: MN_calculate_ICN, document_discriminator: MN_calculate_DD  },
-           
             'AK': { customer_id: AK_calculate_documentNumber, inventory_control: AK_calculate_ICN, document_discriminator: AK_calculate_DD },
+            'AL': { customer_id: AL_calculate_documentNumber, inventory_control: AL_calculate_ICN, expiry_date: AL_calculate_expiry_date },
             'AR': { customer_id: AR_calculate_documentNumber, inventory_control: AR_calculate_ICN, document_discriminator: AR_calculate_DD },
-            'AZ': { customer_id: AZ_calculate_documentNumber, inventory_control: AZ_calculate_ICN, document_discriminator: AZ_calculate_DD },            
-             'CO': { customer_id: CO_calculate_documentNumber, document_discriminator: CO_calculate_DD,inventory_control: CO_calculate_ICN },
-            'FL': { customer_id: FL_calculate_documentNumber, inventory_control: FL_calculate_ICN, document_discriminator: FL_calculate_DD },           
+            'AZ': { customer_id: AZ_calculate_documentNumber, inventory_control: AZ_calculate_ICN, document_discriminator: AZ_calculate_DD },
+            'CA': { customer_id: CA_calculate_documentNumber, inventory_control: CA_calculate_ICN, document_discriminator: CA_calculate_DD },
+            'CO': { customer_id: CO_calculate_documentNumber, inventory_control: CO_calculate_ICN, document_discriminator: CO_calculate_DD },
+            'CT': { customer_id: CT_calculate_documentNumber, inventory_control: CT_calculate_ICN, document_discriminator: CT_calculate_DD },
+            'DE': { customer_id: DE_calculate_documentNumber, inventory_control: DE_calculate_ICN, document_discriminator: DE_calculate_DD },
+            'FL': { customer_id: FL_calculate_documentNumber, inventory_control: FL_calculate_ICN, document_discriminator: FL_calculate_DD },
             'GA': { customer_id: GA_calculate_documentNumber, inventory_control: GA_calculate_ICN },
             'HI': { customer_id: HI_calculate_documentNumber, inventory_control: HI_calculate_ICN },
             'IA': { inventory_control: IA_calculate_ICN },
-            'ID': { customer_id: ID_calculate_documentNumber, inventory_control: ID_calculate_ICN, document_discriminator: ID_calculate_DD },  
+            'ID': { customer_id: ID_calculate_documentNumber, inventory_control: ID_calculate_ICN, document_discriminator: ID_calculate_DD },
             'IL': { customer_id: IL_calculate_documentNumber, inventory_control: IL_calculate_ICN, document_discriminator: IL_calculate_DD },
-             'IN': { customer_id: IN_calculate_documentNumber, inventory_control: IN_calculate_ICN, document_discriminator: IN_calculate_DD },
+            'IN': { customer_id: IN_calculate_documentNumber, inventory_control: IN_calculate_ICN, document_discriminator: IN_calculate_DD },
             'KS': { customer_id: KS_calculate_documentNumber, inventory_control: KS_calculate_ICN },
             'KY': { customer_id: KY_calculate_documentNumber, inventory_control: KY_calculate_ICN, document_discriminator: KY_calculate_DD },
             'LA': { customer_id: LA_calculate_documentNumber, inventory_control: LA_calculate_ICN },
-            'MA': { customer_id: MA_calculate_documentNumber, inventory_control: MA_calculate_ICN, document_discriminator: MA_calculate_DD },            
+            'MA': { customer_id: MA_calculate_documentNumber, inventory_control: MA_calculate_ICN, document_discriminator: MA_calculate_DD },
             'MD': { inventory_control: MD_calculate_ICN },
-            'ME': { customer_id: ME_calculate_documentNumber, inventory_control: ME_calculate_ICN },
-            'MI': { customer_id: MI_calculate_documentNumber, inventory_control: MI_calculate_ICN }, 
+            'ME': { customer_id: ME_calculate_documentNumber, inventory_control: ME_calculate_ICN, document_discriminator: ME_calculate_DD },
+            'MI': { customer_id: MI_calculate_documentNumber, inventory_control: MI_calculate_ICN, document_discriminator: MI_calculate_DD },
+            'MN': { customer_id: MN_calculate_documentNumber, inventory_control: MN_calculate_ICN, document_discriminator: MN_calculate_DD },
             'MO': { customer_id: MO_calculate_documentNumber, inventory_control: MO_calculate_ICN, document_discriminator: MO_calculate_DD },
-            'MS': { 
-                customer_id: MS_calculate_documentNumber, 
-                inventory_control: MS_calculate_ICN, 
-                document_discriminator: MS_calculate_DD 
-            },
-               'MT': { 
-                customer_id: MT_calculate_documentNumber, 
-                inventory_control: MT_calculate_ICN, 
-                document_discriminator: MT_calculate_DD 
-            },
-  'NC': { 
-                customer_id: NC_calculate_documentNumber, 
-                inventory_control: NC_calculate_ICN, 
-                document_discriminator: NC_calculate_DD }, 
-'ND': { 
-                customer_id: ND_calculate_documentNumber, 
-                inventory_control: ND_calculate_ICN, 
-                document_discriminator: ND_calculate_DD 
-            },            'NE': { customer_id: NE_calculate_documentNumber,inventory_control: NE_calculate_ICN,document_discriminator: NE_calculate_DD},
- 'NH': { 
-                customer_id: NH_calculate_documentNumber, 
-                inventory_control: NH_calculate_ICN, 
-                document_discriminator: NH_calculate_DD  },  
- 'NJ': { 
-                customer_id: NJ_calculate_documentNumber, 
-                inventory_control: NJ_calculate_ICN, 
-                document_discriminator: NJ_calculate_DD 
-            },            
+            'MS': { customer_id: MS_calculate_documentNumber, inventory_control: MS_calculate_ICN, document_discriminator: MS_calculate_DD },
+            'MT': { customer_id: MT_calculate_documentNumber, inventory_control: MT_calculate_ICN, document_discriminator: MT_calculate_DD },
+            'NC': { customer_id: NC_calculate_documentNumber, inventory_control: NC_calculate_ICN, document_discriminator: NC_calculate_DD },
+            'ND': { customer_id: ND_calculate_documentNumber, inventory_control: ND_calculate_ICN, document_discriminator: ND_calculate_DD },
+            'NE': { customer_id: NE_calculate_documentNumber, inventory_control: NE_calculate_ICN, document_discriminator: NE_calculate_DD },
+            'NH': { customer_id: NH_calculate_documentNumber, inventory_control: NH_calculate_ICN, document_discriminator: NH_calculate_DD },
+            'NJ': { customer_id: NJ_calculate_documentNumber, inventory_control: NJ_calculate_ICN, document_discriminator: NJ_calculate_DD },
             'NM': { customer_id: NM_calculate_documentNumber, inventory_control: NM_calculate_ICN },
- 'NV': { 
-                customer_id: NV_calculate_documentNumber, 
-                inventory_control: NV_calculate_ICN, 
-                document_discriminator: NV_calculate_DD }, 
-'NY': { 
-                customer_id: NY_calculate_documentNumber, 
-                document_discriminator: NY_calculate_DD 
-            },            
-  'OH': { 
-                customer_id: OH_calculate_documentNumber, 
-                inventory_control: OH_calculate_ICN, 
-                document_discriminator: OH_calculate_DD 
-            },         
-'OK': { 
-                customer_id: OK_calculate_documentNumber, 
-                inventory_control: OK_calculate_ICN, 
-                document_discriminator: OK_calculate_DD 
-            },           
-             'OR': { customer_id: OR_calculate_documentNumber, inventory_control: OR_calculate_ICN },
-            'PA': { 
-                customer_id: PA_calculate_documentNumber, 
-                inventory_control: PA_calculate_ICN, 
-                document_discriminator: PA_calculate_DD },
-                  'DE': { 
-                customer_id: DE_calculate_documentNumber, 
-                inventory_control: DE_calculate_ICN, 
-                document_discriminator: DE_calculate_DD 
-            },
-                        
-                        'SD': { customer_id: SD_calculate_documentNumber, inventory_control: SD_calculate_ICN },
- 'TN': { 
-                customer_id: TN_calculate_documentNumber, 
-                inventory_control: TN_calculate_ICN, 
-                document_discriminator: TN_calculate_DD },
-'TX': { 
-                customer_id: TX_calculate_documentNumber, 
-                inventory_control: TX_calculate_ICN, 
-                document_discriminator: TX_calculate_DD },
- 'UT': { 
-                customer_id: UT_calculate_documentNumber, 
-                inventory_control: UT_calculate_ICN, 
-                document_discriminator: UT_calculate_DD 
-            },           
-            'VA': { 
-                customer_id: VA_calculate_documentNumber, 
-                inventory_control: VA_calculate_ICN, 
-                document_discriminator: VA_calculate_DD 
-            },            
+            'NV': { customer_id: NV_calculate_documentNumber, inventory_control: NV_calculate_ICN, document_discriminator: NV_calculate_DD },
+            'NY': { customer_id: NY_calculate_documentNumber, document_discriminator: NY_calculate_DD },
+            'OH': { customer_id: OH_calculate_documentNumber, inventory_control: OH_calculate_ICN, document_discriminator: OH_calculate_DD },
+            'OK': { customer_id: OK_calculate_documentNumber, inventory_control: OK_calculate_ICN, document_discriminator: OK_calculate_DD },
+            'OR': { customer_id: OR_calculate_documentNumber, inventory_control: OR_calculate_ICN },
+            'PA': { customer_id: PA_calculate_documentNumber, inventory_control: PA_calculate_ICN, document_discriminator: PA_calculate_DD },
+            'RI': { customer_id: RI_calculate_documentNumber, inventory_control: RI_calculate_ICN, document_discriminator: RI_calculate_DD },
+            'SC': { customer_id: SC_calculate_documentNumber },
+            'SD': { customer_id: SD_calculate_documentNumber, inventory_control: SD_calculate_ICN },
+            'TN': { customer_id: TN_calculate_documentNumber, inventory_control: TN_calculate_ICN, document_discriminator: TN_calculate_DD },
+            'TX': { customer_id: TX_calculate_documentNumber, inventory_control: TX_calculate_ICN },
+            'UT': { customer_id: UT_calculate_documentNumber, inventory_control: UT_calculate_ICN, document_discriminator: UT_calculate_DD },
+            'VA': { customer_id: VA_calculate_documentNumber, inventory_control: VA_calculate_ICN, document_discriminator: VA_calculate_DD },
             'VT': { customer_id: VT_calculate_documentNumber },
-             'WA': { 
-                customer_id: WA_calculate_documentNumber, 
-                inventory_control: WA_calculate_ICN, 
-                document_discriminator: WA_calculate_DD 
-            },
-            'WI': { 
-                customer_id: WI_calculate_documentNumber, 
-                inventory_control: WI_calculate_ICN, 
-                document_discriminator: WI_calculate_DD  },
-             'WV': { 
-                customer_id: WV_calculate_documentNumber, 
-                inventory_control: WV_calculate_ICN, 
-                document_discriminator: WV_calculate_DD },
-                          'WY': { 
-                customer_id: WY_calculate_documentNumber, 
-                inventory_control: WY_calculate_ICN_and_DD, 
-                document_discriminator: WY_calculate_ICN_and_DD 
-            }
+            'WA': { customer_id: WA_calculate_documentNumber, inventory_control: WA_calculate_ICN, document_discriminator: WA_calculate_DD },
+            'WI': { inventory_control: WI_calculate_ICN, document_discriminator: WI_calculate_DD },
+            'WV': { customer_id: WV_calculate_documentNumber, inventory_control: WV_calculate_ICN, document_discriminator: WV_calculate_DD },
+            'WY': { customer_id: WY_calculate_documentNumber, inventory_control: WY_calculate_ICN_and_DD, document_discriminator: WY_calculate_ICN_and_DD 
+}
+        
         }
     };
     
@@ -2168,12 +2082,17 @@ $$$$$$   $$   $$  $$ $$   $   $$   $$  $$ $$  $$
         const padding = parseInt(document.getElementById('a417-padding-input').value) || 10;
         a417_all_records.forEach((record, index) => {
             const dl_length = calculateDlSubfileLength(record);
+            // SỬA LỖI 2: Sửa lỗi chính tả từ "ApadStart" thành "padStart"
             record.dl_subfile_length = String(dl_length).padStart(4, '0');
             const dataString = generateAamvaDataString(record);
             const canvas = generateBarcode(dataString, scale, padding);
             a417_barcode_images[index] = canvas;
         });
         populateRecordsTable();
+         if (a417_all_records.length > 0) {
+            onRecordSelect(0); 
+        }
+        
     }
     
     function populateRecordsTable() {
@@ -2197,7 +2116,7 @@ $$$$$$   $$   $$  $$ $$   $   $$   $$  $$ $$  $$
         for(const name in a417_fields) {
             if(a417_fields[name]) a417_fields[name].value = recordData[name] || '';
         }
-        updateIinBasedOnState();
+        // updateIinBasedOnState(); // KHÔNG CẦN GỌI Ở ĐÂY VÌ SẼ LÀM THAY ĐỔI DỮ LIỆU ĐÃ IMPORT
         if (canvas) {
             barcodePreview.innerHTML = '';
             const img = document.createElement('img');
@@ -2298,5 +2217,8 @@ $$$$$$   $$   $$  $$ $$   $   $$   $$  $$ $$  $$
     }
     
     buildFormAndControls();
-    generateAllRandomData();
+    // Tôi cũng đã xóa lệnh gọi generateAllRandomData() ở đây để khi tải lại trang,
+    // nó không tự động tạo dữ liệu ngẫu nhiên, giúp bạn dễ dàng kiểm tra chức năng import hơn.
+    // Nếu bạn muốn nó tự tạo dữ liệu khi tải, hãy thêm lại dòng này:
+    // generateAllRandomData(); 
 }
