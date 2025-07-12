@@ -2143,6 +2143,9 @@ $$$$$$   $$   $$  $$ $$   $   $$   $$  $$ $$  $$
     function generateBarcodeForCurrentData() {
         try {
             const currentData = getCurrentData();
+             if (!currentData.filename) {
+            currentData.filename = currentData.customer_id || `record_${new Date().getTime()}`;
+        }
             const dl_length = calculateDlSubfileLength(currentData);
             currentData.dl_subfile_length = String(dl_length).padStart(4, '0');
             if(a417_fields.dl_subfile_length) a417_fields.dl_subfile_length.value = currentData.dl_subfile_length;
@@ -2152,26 +2155,41 @@ $$$$$$   $$   $$  $$ $$   $   $$   $$  $$ $$  $$
             const padding = parseInt(document.getElementById('a417-padding-input').value) || 10;
             const canvas = generateBarcode(dataString, scale, padding);
             if(canvas) {
+
                 barcodePreview.innerHTML = '';
                 const img = document.createElement('img');
                 img.src = canvas.toDataURL();
                 barcodePreview.appendChild(img);
+                // 2. [THÊM MỚI] Hiển thị dữ liệu văn bản (formatted và raw)
+            displayFormattedData(currentData);
+            rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + dataString.replace(/\n/g, '\\n\n').replace(/\u001e/g, '<RS>').replace(/\u000d/g, '<CR>');
                 const selectedRow = recordsTableBody.querySelector('tr.selected');
-                if(selectedRow) {
-                    const index = parseInt(selectedRow.dataset.index);
-                    a417_all_records[index] = currentData;
-                    a417_barcode_images[index] = canvas;
-                    populateRecordsTable();
-                    recordsTableBody.querySelector(`[data-index='${index}']`).classList.add('selected');
-                }
-                alert("Barcode generated/updated successfully for current data!");
+            if (selectedRow) {
+                // Cập nhật bản ghi đã có
+                const index = parseInt(selectedRow.dataset.index);
+                a417_all_records[index] = currentData;
+                a417_barcode_images[index] = canvas;
+                populateRecordsTable();
+                const newSelectedRow = recordsTableBody.querySelector(`[data-index='${index}']`);
+                if (newSelectedRow) newSelectedRow.classList.add('selected');
+                // alert("Đã cập nhật thành công bản ghi hiện tại!"); // Có thể bỏ alert này để đỡ phiền
             } else {
-                alert("Failed to generate barcode.");
+                // Thêm bản ghi mới
+                a417_all_records.push(currentData);
+                a417_barcode_images[a417_all_records.length - 1] = canvas;
+                populateRecordsTable();
+                const newIndex = a417_all_records.length - 1;
+                const newRow = recordsTableBody.querySelector(`[data-index='${newIndex}']`);
+                if (newRow) newRow.classList.add('selected');
+                // alert("Đã tạo và thêm thành công bản ghi mới!"); // Có thể bỏ alert này
             }
-        } catch (e) {
-            alert("Error: " + e.message);
+        } else {
+            alert("Failed to generate barcode.");
         }
+    } catch (e) {
+        alert("Error: " + e.message);
     }
+}
     
     async function exportAllImages() {
         if (a417_all_records.length === 0) {
