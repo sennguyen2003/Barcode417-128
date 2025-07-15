@@ -2041,28 +2041,34 @@ $$$$$$   $$   $$  $$ $$   $   $$   $$  $$ $$  $$
     }
     
     function generateAamvaDataString(record_data) {
-         const dl_length = String(record_data.dl_subfile_length || '0').padStart(4, '0');
-         let data = `@\n\u001e\u000dANSI ${record_data.iin || ''.padEnd(6)}`+
-                    `${(record_data.aamva_version || '').padStart(2, '0')}`+
-                    `${(record_data.jurisdiction_version || '').padStart(2, '0')}`+
-                    `${(record_data.subfile_count || '').padStart(2, '0')}`+
-                    `DL0042${dl_length}DL`;
+           const dl_length = String(record_data.dl_subfile_length || '0').padStart(4, '0');
+    let data = `@\n\u001e\u000dANSI ${record_data.iin || ''.padEnd(6)}`+
+               `${(record_data.aamva_version || '').padStart(2, '0')}`+
+               `${(record_data.jurisdiction_version || '').padStart(2, '0')}`+
+               `${(record_data.subfile_count || '').padStart(2, '0')}`+
+               `DL0042${dl_length}DL`;
+                   data += `DAQ${String(record_data.customer_id || '')}\n`;
+
         const data_elements = [
-            ['DAQ', 'customer_id'],['DCS', 'family_name'], ['DAC', 'first_name'], ['DAD', 'middle_name'], ['DBD', 'issue_date'],
-            ['DBB', 'dob'], ['DBA', 'expiry_date'], ['DBC', 'sex'], ['DAY', 'eye_color'], ['DAU', 'height'],
-            ['DAG', 'street1'], ['DAI', 'city'], ['DAJ', 'state'], ['DAK', 'postal_code'], ['DCF', 'document_discriminator'],
-            ['DCG', 'country'], ['DDE', 'family_name_trunc'], ['DDF', 'first_name_trunc'], ['DDG', 'middle_name_trunc'],
-            ['DCA', 'vehicle_class'],['DCB', 'restrictions'],['DCD', 'endorsements'],['DDB', 'card_revision_date'],
-            ['DDK', 'organ_donor'],['DCK', 'inventory_control']
-        ];
+        ['DAQ', 'customer_id'],
+        ['DCS', 'family_name'], ['DAC', 'first_name'], ['DAD', 'middle_name'], ['DBD', 'issue_date'],
+        ['DBB', 'dob'], ['DBA', 'expiry_date'], ['DBC', 'sex'], ['DAY', 'eye_color'], ['DAU', 'height'],
+        ['DAG', 'street1'], ['DAI', 'city'], ['DAJ', 'state'], ['DAK', 'postal_code'], ['DCF', 'document_discriminator'],
+        ['DCG', 'country'], ['DDE', 'family_name_trunc'], ['DDF', 'first_name_trunc'], ['DDG', 'middle_name_trunc'],
+        ['DCA', 'vehicle_class'],['DCB', 'restrictions'],['DCD', 'endorsements'],['DDB', 'card_revision_date'],
+        ['DDK', 'organ_donor'],['DCK', 'inventory_control']
+    ];
         for (const [element_id, field_name] of data_elements) {
-            const value = String(record_data[field_name] || '');
-            if (value) data += `${element_id}${value}\n`;
+        const value = String(record_data[field_name] || '');
+        // Chỉ thêm các trường có giá trị để tiết kiệm không gian
+        if (value) {
+            data += `${element_id}${value}\n`;
         }
-        data += "\u000d";
-        return data;
     }
 
+    data += "\u000d";
+    return data;
+}
     function generateBarcode(dataString, scale, padding) {
         const canvas = document.createElement('canvas');
         try {
