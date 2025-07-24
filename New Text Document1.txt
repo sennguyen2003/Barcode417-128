@@ -7,8 +7,8 @@
 -Connecticut (DONE)-CT- ICN(DONE)
 -Delaware(DONE)-DE-ICN(DONE)
 - Florida(DONE)-FL-ICN(DONE)
-	-Georgia(NONE) GA -(DONE)
-	-Hawaii(NONE) HI-(DONE)
+-Georgia(NONE) GA -(DONE)
+-Hawaii(NONE) HI-(DONE)
 -Idaho(DONE)-ID- ICN(DONE)
 -Illinois(DONE)-IL-ICN(done)
 -Indiana(DONE)-IN(DONE)
@@ -38,7 +38,7 @@
 -Pennsylvania (DONE DD,ICN, DL numbert)-PA
 -Rhode Island (DONE)-RI-ICN(DONE)(7 random digits.You can click on the calculator icon to calculate DD automatically!)
 -South carolia(DONE)SC 
-	-South Dakota (NONE)DL:8 digits.ICN:042000 + 10 digits,DD:
+	-South Dakota (DONE)DL:8 digits.ICN:042000 + 10 digits,DD:
 -Tennessee (DONE)-TN-ICN(DONE)
 -Texas-TX-ICN(DONE)(20 digits with custom algorithm. Please click on the calculator icon to calculate DD automatically!)
 -Utah(DONE)-UT-ICN(DONE)(8 random digits. You can click on the calculator icon to calculate DD automatically!)

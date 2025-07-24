@@ -160,7 +160,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         }
         // ==
 
-        const states = ["AK", "AL", "AR", "AZ", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA", "MD", "ME", "MI", "MN", "MO", "MS", "MT", "NC", "DC","ND", "NE", "NH", "NJ", "NM", "NV", "NY", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VA", "VT", "WA", "WI", "WV", "WY"];
+        const states = ["AK", "AL", "AR", "AZ", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA", "MD", "ME", "MI", "MN", "MO", "MS", "MT", "NC", "ND", "NE", "NH", "NJ", "NM", "NV", "NY", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VA", "VT", "WA", "WI", "WV", "WY"];
         let stateOptions = states.map(s => `<option value="${s}"></option>`).join('');
         
         controlsContainer.innerHTML = `
@@ -2345,9 +2345,22 @@ const DC_calculate_DD = () => {
         const currentCityData = cityData[selectedState] || { cities: ["Anytown"], zips: [12345]};
         const randomIndex = Math.floor(Math.random() * currentCityData.cities.length);
         
-        a417_fields.city.value = currentCityData.cities[randomIndex];
-        a417_fields.postal_code.value = String(currentCityData.zips[randomIndex] + Math.floor(Math.random() * 50)).padStart(5,'0');
-        a417_fields.street1.value = `${Math.floor(Math.random() * 9000) + 100} ${["Main St", "Oak Ave", "Pine Rd"][Math.floor(Math.random()*3)]}`;
+        // === BẮT ĐẦU SỬA ĐỔI ===
+        // 1. Tạo riêng từng phần của địa chỉ
+        const streetPart = `${Math.floor(Math.random() * 9000) + 100} ${["Main St", "Oak Ave", "Pine Rd"][Math.floor(Math.random()*3)]}`;
+        const cityPart = currentCityData.cities[randomIndex];
+        const zipPart = String(currentCityData.zips[randomIndex] + Math.floor(Math.random() * 50)).padStart(5,'0');
+
+        // 2. Tạo chuỗi địa chỉ đầy đủ, dùng ký tự '^' để ngăn cách như trong ảnh của bạn
+        const fullAddress = `${streetPart}^${cityPart} ${zipPart}`;
+
+        // 3. Gán toàn bộ chuỗi vào ô Street 1 (trường DAG trong mã vạch)
+        a417_fields.street1.value = fullAddress;
+
+        // 4. Xóa trống các ô City và Postal Code để chúng không được thêm vào mã vạch như các trường riêng lẻ
+        a417_fields.city.value = '';
+        a417_fields.postal_code.value = '';
+        // === KẾT THÚC SỬA ĐỔI ===
         
         a417_fields.height.value = `0${(Math.floor(Math.random() * 16) + 60)}`;
         a417_fields.weight_pounds.value = (Math.floor(Math.random() * 100) + 120).toString();
@@ -2368,7 +2381,7 @@ const DC_calculate_DD = () => {
         return data;
     }
 
-        function importFromExcel(event) {
+    function importFromExcel(event) {
         const file = event.target.files[0];
         if (!file) return;
         const reader = new FileReader();
@@ -2379,16 +2392,9 @@ const DC_calculate_DD = () => {
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
                 const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
-                if (jsonData.length === 0) {
-                    alert("No data found in Excel file.");
-                    return;
-                }
-
+                if (jsonData.length === 0) { alert("No data found in Excel file."); return; }
                 a417_all_records = [];
                 a417_barcode_images = {};
-                
-                // Ánh xạ từ tiêu đề cột Excel sang tên trường nội bộ
                 const excelMapping = {
                     'Last Name': 'family_name', 'First Name': 'first_name', 'Middle Name': 'middle_name',
                     'Date of Birth': 'dob', 'Expiration Date': 'expiry_date', 'Issue Date': 'issue_date',
@@ -2397,76 +2403,34 @@ const DC_calculate_DD = () => {
                     'Hair Color': 'hair_color', 'Weight (lbs)': 'weight_pounds', 'Country': 'country',
                     'Document Discriminator': 'document_discriminator', 'Card Revision Date': 'card_revision_date',
                     'Inventory control': 'inventory_control', 'Vehicle Class': 'vehicle_class',
-                    'Filename': 'filename',
-                    // Thêm các trường mới nếu có trong Excel
-                    'Issuing Office': 'issuing_office',
-                    'Audit Information': 'audit_info'
+                    'Filename': 'filename'
                 };
-
-                // Lấy danh sách tất cả các tên trường hợp lệ từ fieldDefinitions
-                const allFieldNames = Object.values(fieldDefinitions).flatMap(cat => cat.fields.map(f => f.name));
-
                 jsonData.forEach(row => {
-                    // === BẮT ĐẦU SỬA ĐỔI QUAN TRỌNG ===
-                    // 1. Tạo một đối tượng recordData trống cho mỗi dòng
-                    const recordData = {};
-
-                    // 2. Khởi tạo tất cả các trường với giá trị rỗng để đảm bảo tính nhất quán
-                    allFieldNames.forEach(fieldName => {
-                        recordData[fieldName] = '';
-                    });
-
-                    // 3. Điền dữ liệu từ file Excel
-                    for (const excelHeader in excelMapping) {
-                        if (row[excelHeader] !== undefined && row[excelHeader] !== null) {
+                    let recordData = getCurrentData();
+                     for (const excelHeader in excelMapping) {
+                        if (row[excelHeader] !== undefined) {
                             const fieldName = excelMapping[excelHeader];
                             let value = String(row[excelHeader]).trim();
-
-                            // Xử lý ngày tháng
                             if (['Date of Birth', 'Expiration Date', 'Issue Date'].includes(excelHeader) && value) {
-                                // Logic này phức tạp và có thể gây lỗi, đơn giản hóa nó
-                                // Giả sử Excel có định dạng MM/DD/YYYY hoặc là số ngày của Excel
-                                try {
-                                    const date = new Date(value);
-                                    // Kiểm tra xem có phải là ngày hợp lệ không
-                                    if (!isNaN(date.getTime())) {
-                                        value = getFormattedDate_MMDDYYYY(date);
-                                    }
-                                    // Nếu không, giữ nguyên giá trị gốc từ Excel (có thể là MMDDYYYY)
-                                } catch (dateError) {
-                                    // Bỏ qua lỗi và giữ nguyên giá trị
+                                const dt = new Date(value);
+                                if (!isNaN(dt)) {
+                                    value = (dt.getMonth()+1).toString().padStart(2,'0') + dt.getDate().toString().padStart(2,'0') + dt.getFullYear();
                                 }
-                            } 
-                            // Xử lý giới tính: chuyển đổi mọi thứ về 1, 2, hoặc 9
-                            else if (fieldName === 'sex') {
-                                const val_lower = value.toLowerCase();
-                                if (['male', 'm', '1', 'nam'].includes(val_lower)) {
-                                    value = "1";
-                                } else if (['female', 'f', '2', 'nữ'].includes(val_lower)) {
-                                    value = "2";
-                                } else {
-                                    value = "9"; // Mặc định là không xác định
-                                }
-                            }
-                            
-                            if (fieldName) { // Đảm bảo fieldName tồn tại
-                                recordData[fieldName] = value;
-                            }
+                            } else if(fieldName === 'sex') {
+    const val_lower = value.toLowerCase();
+    if (['male', 'M', '1', 'nam'].includes(val_lower)) value = "1";
+    else if (['female', 'F', '2', 'nữ'].includes(val_lower)) value = "2";
+    else value = "9";
+}
+                            recordData[fieldName] = value;
                         }
                     }
-                     // === KẾT THÚC SỬA ĐỔI QUAN TRỌNG ===
-
-                    // Thêm các giá trị mặc định nếu cần và chúng chưa được điền từ Excel
-                    if (!recordData.country) recordData.country = 'USA';
-                    
                     a417_all_records.push(recordData);
                 });
-
                 generateAndDisplayAllBarcodes();
                 alert(`Successfully imported and generated ${a417_all_records.length} barcodes!`);
-
             } catch (err) {
-                console.error("Error processing Excel file:", err);
+                console.error(err);
                 alert("Error processing Excel file: " + err.message);
             }
         };
@@ -2498,11 +2462,24 @@ const DC_calculate_DD = () => {
     //////////////////chỗ hiện thị khi quét
     function generateAamvaDataString(record_data) {
            const dl_length = String(record_data.dl_subfile_length || '0').padStart(4, '0');
-    let data = `@\n\u001e\u000dANSI ${record_data.iin || ''.padEnd(6)}`+
-               `${(record_data.aamva_version || '').padStart(2, '0')}`+
-               `${(record_data.jurisdiction_version || '').padStart(2, '0')}`+
-               `${(record_data.subfile_count || '').padStart(2, '0')}`+
-               `DL0042${dl_length}DL`;
+        let data = `@\n\u001e\u000dANSI ${record_data.iin || ''.padEnd(6)}` +
+                   `${(record_data.aamva_version || '').padStart(2, '0')}` +
+                   `${(record_data.jurisdiction_version || '').padStart(2, '0')}` +
+                   `${(record_data.subfile_count || '').padStart(2, '0')}` +
+                   `DL0042${dl_length}DL`;
+                   const processed_data = { ...record_data };
+    
+        // === LOGIC HỢP NHẤT ĐỊA CHỈ ===
+        // 1. Kiểm tra xem chuỗi street1 có chứa dấu '^' hay không.
+        //    Nếu có (tức là dữ liệu từ Excel đã đúng định dạng), thì không cần làm gì.
+        // 2. Nếu không chứa dấu '^' VÀ cả city và postal_code đều có giá trị (tức là dữ liệu từ Fill All),
+        //    thì tiến hành ghép chúng lại.
+        if (!processed_data.street1.includes('^') && processed_data.city && processed_data.postal_code) {
+            processed_data.street1 = `${processed_data.street1}^${processed_data.city} ${processed_data.postal_code}`;
+            // Xóa city và postal_code trong bản sao để chúng không bị thêm vào mã vạch một cách riêng lẻ
+            processed_data.city = '';
+            processed_data.postal_code = '';
+        }
                    data += `DAQ${String(record_data.customer_id || '')}\n`;
 
         const data_elements = [
@@ -2520,28 +2497,21 @@ const DC_calculate_DD = () => {
         // ==============================
     ];
             for (const [element_id, field_name] of data_elements) {
-        let value = String(record_data[field_name] || '');
-
-        // === BẮT ĐẦU THAY ĐỔI ===
-        // Chuyển đổi giá trị giới tính từ số sang chữ cái
-        if (field_name === 'sex') {
-            if (value === '1') {
-                value = 'M';
-            } else if (value === '2') {
-                value = 'F';
+            // Luôn sử dụng dữ liệu đã qua xử lý
+            let value = String(processed_data[field_name] || '');
+    
+            if (field_name === 'sex') {
+                if (value === '1') value = 'M';
+                else if (value === '2') value = 'F';
             }
-            // Giá trị '9' (Unknown) sẽ được giữ nguyên
+    
+            if (value) {
+                data += `${element_id}${value}\n`;
+            }
         }
-        // === KẾT THÚC THAY ĐỔI ===
-
-        // Chỉ thêm các trường có giá trị để tiết kiệm không gian
-        if (value) {
-            data += `${element_id}${value}\n`;
-        }
+        data += "\u000d";
+        return data;
     }
-    data += "\u000d";
-    return data;
-}
     function generateBarcode(dataString, scale, padding) {
         const canvas = document.createElement('canvas');
         try {
