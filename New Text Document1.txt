@@ -7,11 +7,17 @@
 -Connecticut (DONE)-CT- ICN(DONE)
 -Delaware(DONE)-DE-ICN(DONE)
 - Florida(DONE)-FL-ICN(DONE)
+	-Georgia(NONE) GA -(DONE)
+	-Hawaii(NONE) HI-(DONE)
 -Idaho(DONE)-ID- ICN(DONE)
 -Illinois(DONE)-IL-ICN(done)
 -Indiana(DONE)-IN(DONE)
+-IOWA(DONE)) IA 9 digits + first letter of last name + first letter of first name+4digits+sex+ expiry date (MMDDYY) + R.
+-Kansas(DONE) KS
 -Kentucky (DONE)-KY(DONE)
+- LOUISIANA (DONE) LA
 -Maine(DONE)-ME(DONE)
+-Maryland (DONE) MD
 -Massachusetts (DONE)-ICN(DONE) MA(Issue date + revision date You can click on the calculator icon to calculate DD automatically!)
 - Michigan (DONE)-MI-ICN(DONE)(13 random numbers) (NOT DD)
 -Minnesota(DONE)-MN-ICN(DONE)(7 zeros + 7 random digits. You can click on the calculator icon to calculate DD automatically!)
@@ -28,13 +34,18 @@
 -North Dakota(DONE,DD,ICN)-ND
 -Ohio (DONE)-OH-ICN(DONE) (0+ 8 random numbers)
 -Oklahoma (DONE)-OK-ICN(DONE)(Documunet number + Date of birth (MMDDYY) + issue date (MMDDYY) + letter. You can click on the calculator icon to calculate DD automatically!)
+- Oregon (done)) OR
 -Pennsylvania (DONE DD,ICN, DL numbert)-PA
 -Rhode Island (DONE)-RI-ICN(DONE)(7 random digits.You can click on the calculator icon to calculate DD automatically!)
+-South carolia(DONE)SC 
+	-South Dakota (NONE)DL:8 digits.ICN:042000 + 10 digits,DD:
 -Tennessee (DONE)-TN-ICN(DONE)
 -Texas-TX-ICN(DONE)(20 digits with custom algorithm. Please click on the calculator icon to calculate DD automatically!)
 -Utah(DONE)-UT-ICN(DONE)(8 random digits. You can click on the calculator icon to calculate DD automatically!)
+-Vermont(DONE)DD:Issue date (MMDDYY)+4 digits + DL number.
 -Virginia(DONE)-ICN(DONE)VA('O' + 8 digits. You can click on the calculator icon to calculate DD automatically!)
 -Washington (DONE DD,ICN)-WA
+- Washington DC (NONE)
 - West Virginia(DONE)-WV-ICN(DONE)(Date of birth (MMDDYY) + First letter of last name + first letter of first name + expiry data (YYDD). You can click on the calculator icon to calculate DD automatically!)
 -Wisconsin (DONE)-WI-ICN(DONE)('OT + first letter of Last name + issue date (YYYMMDD) 8 digits. You can click on the calculator icon to calculate DD automatically!)
 -Wyoming (DONE)-iCN (DONE)WY(10000 + 5 random digits)
