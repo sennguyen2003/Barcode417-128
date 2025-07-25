@@ -2516,79 +2516,159 @@ const DC_calculate_DD = () => {
         return total_length;     
     }
     
-    function generateAamvaDataString(record_data) {
-        const dl_length = String(record_data.dl_subfile_length || '0').padStart(4, '0');
-        let data = `@\n\u001e\u000dANSI ${record_data.iin || ''.padEnd(6)}` +
-                   `${(record_data.aamva_version || '10').padStart(2, '0')}` +
-                   `${(record_data.jurisdiction_version || '00').padStart(2, '0')}` +
-                   `${(record_data.subfile_count || '01').padStart(2, '0')}` +
-                   `DL0042${dl_length}DL`;
-                                      data += `DAQ${String(record_data.customer_id || '')}\n`;
+   // === BẮT ĐẦU CODE CUỐI CÙNG (COPY VÀ THAY THẾ TOÀN BỘ HÀM CŨ) ===
 
+// === BẮT ĐẦU CODE GIẢI PHÁP 1 (DỊCH TỪ PYTHON) ===
 
-        // Danh sách các trường và mã AAMVA tương ứng, theo thứ tự ưu tiên
-        const data_elements = [
-            // Thông tin cá nhân
-            ['DAQ', 'customer_id'],
-            ['DCS', 'family_name'], 
-            ['DAC', 'first_name'], 
-            ['DAD', 'middle_name'], 
-            ['DBD', 'issue_date'], 
-            ['DBB', 'dob'], 
-            ['DBA', 'expiry_date'],
-            // Ngày tháng
-                        ['DBC', 'sex'],
-            ['DAY', 'eye_color'],
-            ['DAU', 'height'],
-            ['DAZ', 'hair_color'],
+function generateAamvaDataString(record_data) {
+    // Lấy các giá trị header và định dạng chúng, giống hệt Python
+    const dl_length = String(record_data.dl_subfile_length || '0000').padStart(4, '0');
+    // jurisdiction_length không có trong UI của bạn, nên chúng ta bỏ qua phần xử lý ZC...
 
-             ['DCU', 'name_suffix'],
-            // Địa chỉ
-            ['DAG', 'street1'],
-            ['DAH', 'street2'],
-            ['DAI', 'city'],
-            ['DAJ', 'state'],
-            ['DAK', 'postal_code'],
-            // Mô tả vật lý
-            // Thông tin giấy phép
-            ['DCA', 'vehicle_class'],
-            ['DDA', 'compliance_type'],
-            ['DCB', 'restrictions'],
-            ['DCD', 'endorsements'],
-            ['DDK', 'organ_donor'],
-            ['DDL', 'veteran'],
-            // Thông tin hệ thống
-            ['DCF', 'document_discriminator'],
-            ['DCG', 'country'],
-            ['DCK', 'inventory_control'],
-            ['DCJ', 'audit_info'],
-            ['DDB', 'card_revision_date'],
-            // Các trường ít dùng hơn
-            ['DDE', 'family_name_trunc'], ['DDF', 'first_name_trunc'], ['DDG', 'middle_name_trunc'],
-            ['DCL', 'race'],['DAW', 'weight_pounds'],['DAX', 'weight_kg'],['DCE', 'weight_range'],
-            ['DCM', 'std_vehicle_class'],['DCO', 'std_restriction'],['DCN', 'std_endorsement'],
-            ['DDA', 'compliance_type'],['DDD', 'limited_duration'],['DDC', 'hazmat_expiry'],
-            ['DDH', 'under_18'],['DDI', 'under_19'],['DDJ', 'under_21'],
-            ['DBN', 'alias_family'],['DBG', 'alias_given'],['DBS', 'alias_suffix'],['DCI', 'place_of_birth'],
-            ['IOE', 'issuing_office']
-        ];
-            let subfile_parts = [];
-          for (const [element_id, field_name] of data_elements) {
-        let value = String(record_data[field_name] || '');
+    // 1. TẠO HEADER THEO ĐÚNG CHUẨN CỦA FILE PYTHON
+    let data = `@\n\u001e\u000dANSI ${String(record_data.iin || '').padEnd(6, ' ')}` +
+               `${String(record_data.aamva_version || '10').padStart(2, '0')}` +
+               `${String(record_data.jurisdiction_version || '00').padStart(2, '0')}` +
+               `${String(record_data.subfile_count || '01').padStart(2, '0')}`;
+
+    // Header của subfile, sử dụng "DL0031" giống hệt Python
+    data += `DL0031${dl_length}`;
+    data += "DL";
+
+    // 2. SẮP XẾP LẠI CÁC TRƯỜNG DỮ LIỆU THEO ĐÚNG THỨ TỰ CỦA FILE PYTHON
+    const data_elements = [
+        ['DAQ', 'customer_id'],
+        ['DDE', 'family_name_trunc'],
+        ['DAC', 'first_name'],
+        ['DDF', 'first_name_trunc'],
+        ['DAD', 'middle_name'],
+        ['DDG', 'middle_name_trunc'],
+        ['DCU', 'name_suffix'],
+        ['DBB', 'dob'],
+        ['DBA', 'expiry_date'],
+        ['DBD', 'issue_date'],
+        ['DCS', 'family_name'], // <-- Vị trí này khác so với code JS cũ
+        ['DCF', 'document_discriminator'],
+        ['DCG', 'country'],
+        ['DAG', 'street1'],
+        ['DAH', 'street2'],
+        ['DAI', 'city'],
+        ['DAJ', 'state'],
+        ['DAK', 'postal_code'],
+        ['DBC', 'sex'],
+        ['DAY', 'eye_color'],
+        ['DAU', 'height'],
+        ['DAZ', 'hair_color'],
+        ['DCL', 'race'],
+        ['DAW', 'weight_pounds'],
+        ['DAX', 'weight_kg'],
+        ['DCE', 'weight_range'],
+        ['DCA', 'vehicle_class'],
+        ['DCB', 'restrictions'],
+        ['DCD', 'endorsements'],
+        ['DCM', 'std_vehicle_class'],
+        ['DCO', 'std_restriction'],
+        ['DCN', 'std_endorsement'],
+        // Các trường document_details khác
+        ['DDA', 'compliance_type'],
+        ['DDB', 'card_revision_date'],
+        ['DDD', 'limited_duration'],
+        ['DDC', 'hazmat_expiry'],
+        ['DDH', 'under_18'],
+        ['DDI', 'under_19'],
+        ['DDJ', 'under_21'],
+        ['DDK', 'organ_donor'],
+        ['DDL', 'veteran'],
+        // Các trường optional & jurisdiction-specific
+        ['DBN', 'alias_family'],
+        ['DBG', 'alias_given'],
+        ['DBS', 'alias_suffix'],
+        ['DCI', 'place_of_birth'],
+        ['DCJ', 'audit_info'],
+        ['DCK', 'inventory_control'],
+        ['IOE', 'issuing_office'] // Trường này bạn tự thêm, giữ lại
+    ];
+    
+    // 3. NỐI CÁC TRƯỜNG DỮ LIỆU VÀO, MỖI TRƯỜNG KÈM THEO '\n'
+    // Logic này đảm bảo DAQ được nối liền sau DL và không bị trùng
+    for (const [element_id, field_name] of data_elements) {
+        let value = String(record_data[field_name] || '').trim();
+        if (value) {
+            data += `${element_id}${value}\n`;
+        }
+    }
+    
+    // Xóa ký tự '\n' thừa ở cuối nếu có
+    if (data.endsWith('\n')) {
+        data = data.slice(0, -1);
+    }
+    
+    // 4. THÊM KÝ TỰ KẾT THÚC
+    data += "\u000d";
+    
+    return data;
+}
+
+// === KẾT THÚC CODE GIẢI PHÁP 1 ===
+/*Giải pháp 2: Code theo chuẩn AAMVA mới nhất (Khuyến nghị cho tương lai)
+Phiên bản này tuân thủ chuẩn AAMVA Card Design Standard (CDS) mới nhất. Nó đơn giản hơn, dễ đọc hơn và không dùng mã 31 nữa.
+CẢNH BÁO: Hãy thử nghiệm kỹ giải pháp này, vì có thể máy quét của bạn được thiết kế cho chuẩn cũ và sẽ không đọc được định dạng mới này.
+Generated javascript
+// === BẮT ĐẦU CODE GIẢI PHÁP 2 (CHUẨN MỚI NHẤT) ===
+
+function generateAamvaDataString(record_data) {
+    // 1. TẠO BODY DỮ LIỆU TRƯỚC ĐỂ TÍNH ĐỘ DÀI
+    const data_elements = [
+        // Sắp xếp lại theo nhóm logic để dễ đọc, DAQ vẫn ở đầu
+        // Personal
+        ['DAQ', 'customer_id'], ['DCS', 'family_name'], ['DAC', 'first_name'], ['DAD', 'middle_name'], ['DCU', 'name_suffix'],
+        // Dates
+        ['DBB', 'dob'], ['DBA', 'expiry_date'], ['DBD', 'issue_date'],
+        // Physical
+        ['DBC', 'sex'], ['DAY', 'eye_color'], ['DAU', 'height'], ['DAZ', 'hair_color'],
+        // Address
+        ['DAG', 'street1'], ['DAH', 'street2'], ['DAI', 'city'], ['DAJ', 'state'], ['DAK', 'postal_code'],
+        // Licensing
+        ['DCA', 'vehicle_class'], ['DCB', 'restrictions'], ['DCD', 'endorsements'],
+        // System & Other
+        ['DCF', 'document_discriminator'], ['DCG', 'country'], ['DCK', 'inventory_control'],
+        // Các trường khác có thể thêm vào đây theo thứ tự chuẩn
+    ];
+
+    let subfile_parts = [];
+    for (const [element_id, field_name] of data_elements) {
+        let value = String(record_data[field_name] || '').trim();
         if (value) {
             subfile_parts.push(element_id + value);
         }
     }
+    const subfile_body = subfile_parts.join('\n');
 
-    // Nối tất cả các phần tử trong mảng lại với nhau, sử dụng '\n' làm ký tự phân tách
-    // Cách này đảm bảo ký tự '\n' CHỈ xuất hiện GIỮA các phần tử
-    data += subfile_parts.join('\n');
+    // 2. TÍNH TOÁN ĐỘ DÀI CHÍNH XÁC CỦA SUBFILE
+    // Độ dài subfile = độ dài của body + 1 ký tự kết thúc <CR> (\u000d)
+    const accurate_dl_length = subfile_body.length + 1;
+    const dl_length_str = String(accurate_dl_length).padStart(4, '0');
 
-    // Thêm ký tự kết thúc subfile
-    data += "\u000d"; 
+    // 3. TẠO HEADER CHUẨN MỚI
+    // Header chỉ chứa thông tin chung, không chứa thông tin về subfile
+    const file_header = `@\n\u001e\u000dANSI ${String(record_data.iin || '').padEnd(6, ' ')}` +
+                      `${String(record_data.aamva_version || '10').padStart(2, '0')}` +
+                      `${String(record_data.jurisdiction_version || '00').padStart(2, '0')}` +
+                      `${String(record_data.subfile_count || '01').padStart(2, '0')}`;
+
+    // 4. TẠO SUBFILE HOÀN CHỈNH
+    // Cấu trúc: Mã subfile (DL) + Độ dài + Body + Ký tự kết thúc
+    const subfile = `DL${dl_length_str}${subfile_body}\u000d`;
     
-    return data;
+    // 5. GHÉP HEADER VÀ SUBFILE
+    const final_data_string = file_header + subfile;
+
+    return final_data_string;
 }
+
+// === KẾT THÚC CODE GIẢI PHÁP 2 ===*/
+
+// === KẾT THÚC CODE CUỐI CÙNG ===
     function generateBarcode(dataString, scale, padding) {
         const canvas = document.createElement('canvas');
         try {
@@ -2653,7 +2733,7 @@ const DC_calculate_DD = () => {
         }
         const dataString = generateAamvaDataString(recordData);
         displayFormattedData(recordData);
-        rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + dataString.replace(/\n/g, '\\n\n').replace(/\u001e/g, '<RS>').replace(/\u000d/g, '<CR>');
+        rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + dataString.replace(/\n/g, '\n').replace(/\u001e/g, '<RS>').replace(/\u000d/g, '<CR>');
     }
 
     function displayFormattedData(data) {
@@ -2695,7 +2775,7 @@ const DC_calculate_DD = () => {
                 barcodePreview.appendChild(img);
                 
                 displayFormattedData(currentData);
-                rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + dataString.replace(/\n/g, '\\n\n').replace(/\u001e/g, '<RS>').replace(/\u000d/g, '<CR>');
+                rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + dataString.replace(/\n/g, '\n').replace(/\u001e/g, '<RS>').replace(/\u000d/g, '<CR>');
                 
                 const selectedRow = recordsTableBody.querySelector('tr.selected');
                 if (selectedRow) {
