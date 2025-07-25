@@ -49,3 +49,96 @@
 - West Virginia(DONE)-WV-ICN(DONE)(Date of birth (MMDDYY) + First letter of last name + first letter of first name + expiry data (YYDD). You can click on the calculator icon to calculate DD automatically!)
 -Wisconsin (DONE)-WI-ICN(DONE)('OT + first letter of Last name + issue date (YYYMMDD) 8 digits. You can click on the calculator icon to calculate DD automatically!)
 -Wyoming (DONE)-iCN (DONE)WY(10000 + 5 random digits)
+
+Câu trả lời trực tiếp: Cả hai đều không phải là "mới nhất". Chuẩn AAMVA mới nhất (từ khoảng 2016 trở đi) đã loại bỏ hoàn toàn cấu trúc DL0031 và DL0042.
+Tuy nhiên, trong hai lựa chọn này:
+31 là mã từ một chuẩn cũ hơn nhưng được sử dụng rất rộng rãi và hợp lệ.
+42 gần như chắc chắn là một lỗi hoặc một cách triển khai không theo chuẩn.
+Hãy cùng phân tích chi tiết:
+Sự phát triển của chuẩn AAMVA Header
+Chuẩn Cũ (ví dụ: AAMVA CDS 2005, 2009, 2013):
+Trong các phiên bản này, header của subfile (tệp con) cần chỉ định 3 thông tin: Loại subfile, Vị trí bắt đầu (Offset), và Độ dài (Length).
+Cấu trúc của nó là: DL + Offset + Length.
+0031 (thập phân) chính là giá trị của 0x1F (thập lục phân). Đây là mã ASCII cho ký tự điều khiển US (Unit Separator). Theo chuẩn, vị trí bắt đầu của subfile đầu tiên chính là ký tự này.
+Vì vậy, DL00310246 có nghĩa là: "Đây là một subfile Bằng lái xe (DL), bắt đầu tại vị trí 0031, và có tổng độ dài là 0246 bytes."
+Đây là lý do code Python của bạn dùng 31 và hoạt động tốt, vì nó tuân thủ một chuẩn cũ nhưng rất phổ biến mà máy quét của bạn hiểu được.
+DL0042... là gì?
+42 (thập phân) là 0x2A (thập lục phân), tương ứng với ký tự dấu sao *.
+Ký tự này không có ý nghĩa tiêu chuẩn ở vị trí khai báo offset của subfile AAMVA.
+Gần như chắc chắn đây là một lỗi trong code JavaScript gốc của bạn. Máy quét không hiểu 42 là gì, nên nó đã phân tích sai cấu trúc và bỏ qua dữ liệu.
+Chuẩn Mới Nhất (ví dụ: AAMVA CDS v2.0 - từ 2016):
+Chuẩn mới nhất đã đơn giản hóa header để loại bỏ sự phức tạp của việc khai báo offset.
+Bây giờ, header chỉ cần chỉ định Loại subfile, Số lượng mục (Number of entries), và Độ dài (Length).
+Cấu trúc mới có dạng: DL + Number of Entries + Length.
+Ví dụ: DL00010246 có nghĩa là: "Đây là subfile Bằng lái xe (DL), chứa 0001 mục, và có tổng độ dài là 0246 bytes."
+Bạn có thể thấy, cả 31 và 42 đều không còn được sử dụng trong chuẩn mới nhất.
+
+Bảng so sánh
+Tiêu chí	DL0031... 	(Code Python của bạn)		DL0042... (Code JS cũ của bạn)			Chuẩn AAMVA Mới Nhất
+Phiên bản	Chuẩn cũ (ví dụ: 2005-2013)				Không 									theo chuẩn	Chuẩn mới (từ 2016)
+Cấu trúc	DL + Offset + Length					Không xác định							DL + Entries + Length
+Ý nghĩa của số	31 là offset chuẩn					42 không có ý nghĩa chuẩn				Không dùng 31 hay 42
+Tình trạng	Hợp lệ nhưng đã cũ						Lỗi / Không hợp lệ							Hợp lệ và mới nhất
+
+Kết luận cho trường hợp của bạn:
+Bạn nên sử dụng 31.
+Lý do rất đơn giản: Đó là định dạng mà máy quét của bạn được lập trình để hiểu. Mặc dù không phải là chuẩn mới nhất trên thế giới, nhưng nó là chuẩn chính xác cho hệ thống của bạn. Việc code Python dùng 31 và chạy được là bằng chứng không thể chối cãi.
+Giải pháp 1 (Khuyên dùng ngay lập tức): Dịch chính xác 100% logic từ file Python của bạn sang JavaScript. Giải pháp này đảm bảo sẽ hoạt động với máy quét hiện tại của bạn vì nó tạo ra kết quả giống hệt.
+Giải pháp 2 (Chuẩn mới nhất): Viết lại hàm theo đúng chuẩn AAMVA hiện đại. Code sẽ sạch sẽ hơn, nhưng có một rủi ro nhỏ là máy quét cũ của bạn có thể không tương thích.
+Giải pháp 2: Code theo chuẩn AAMVA mới nhất (Khuyến nghị cho tương lai)
+Phiên bản này tuân thủ chuẩn AAMVA Card Design Standard (CDS) mới nhất. Nó đơn giản hơn, dễ đọc hơn và không dùng mã 31 nữa.
+CẢNH BÁO: Hãy thử nghiệm kỹ giải pháp này, vì có thể máy quét của bạn được thiết kế cho chuẩn cũ và sẽ không đọc được định dạng mới này.
+Generated javascript
+// === BẮT ĐẦU CODE GIẢI PHÁP 2 (CHUẨN MỚI NHẤT) ===
+
+function generateAamvaDataString(record_data) {
+    // 1. TẠO BODY DỮ LIỆU TRƯỚC ĐỂ TÍNH ĐỘ DÀI
+    const data_elements = [
+        // Sắp xếp lại theo nhóm logic để dễ đọc, DAQ vẫn ở đầu
+        // Personal
+        ['DAQ', 'customer_id'], ['DCS', 'family_name'], ['DAC', 'first_name'], ['DAD', 'middle_name'], ['DCU', 'name_suffix'],
+        // Dates
+        ['DBB', 'dob'], ['DBA', 'expiry_date'], ['DBD', 'issue_date'],
+        // Physical
+        ['DBC', 'sex'], ['DAY', 'eye_color'], ['DAU', 'height'], ['DAZ', 'hair_color'],
+        // Address
+        ['DAG', 'street1'], ['DAH', 'street2'], ['DAI', 'city'], ['DAJ', 'state'], ['DAK', 'postal_code'],
+        // Licensing
+        ['DCA', 'vehicle_class'], ['DCB', 'restrictions'], ['DCD', 'endorsements'],
+        // System & Other
+        ['DCF', 'document_discriminator'], ['DCG', 'country'], ['DCK', 'inventory_control'],
+        // Các trường khác có thể thêm vào đây theo thứ tự chuẩn
+    ];
+
+    let subfile_parts = [];
+    for (const [element_id, field_name] of data_elements) {
+        let value = String(record_data[field_name] || '').trim();
+        if (value) {
+            subfile_parts.push(element_id + value);
+        }
+    }
+    const subfile_body = subfile_parts.join('\n');
+
+    // 2. TÍNH TOÁN ĐỘ DÀI CHÍNH XÁC CỦA SUBFILE
+    // Độ dài subfile = độ dài của body + 1 ký tự kết thúc <CR> (\u000d)
+    const accurate_dl_length = subfile_body.length + 1;
+    const dl_length_str = String(accurate_dl_length).padStart(4, '0');
+
+    // 3. TẠO HEADER CHUẨN MỚI
+    // Header chỉ chứa thông tin chung, không chứa thông tin về subfile
+    const file_header = `@\n\u001e\u000dANSI ${String(record_data.iin || '').padEnd(6, ' ')}` +
+                      `${String(record_data.aamva_version || '10').padStart(2, '0')}` +
+                      `${String(record_data.jurisdiction_version || '00').padStart(2, '0')}` +
+                      `${String(record_data.subfile_count || '01').padStart(2, '0')}`;
+
+    // 4. TẠO SUBFILE HOÀN CHỈNH
+    // Cấu trúc: Mã subfile (DL) + Độ dài + Body + Ký tự kết thúc
+    const subfile = `DL${dl_length_str}${subfile_body}\u000d`;
+    
+    // 5. GHÉP HEADER VÀ SUBFILE
+    const final_data_string = file_header + subfile;
+
+    return final_data_string;
+}
+
+// === KẾT THÚC CODE GIẢI PHÁP 2 ===

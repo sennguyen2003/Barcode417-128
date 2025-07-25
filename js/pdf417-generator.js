@@ -37,7 +37,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         "Identification Information": { icon: "fa-solid fa-user", fields: [
             {label: "Family Name (DCS):", name: "family_name", calculable: true}, 
             {label: "First Name (DAC):", name: "first_name", calculable: true},
-            {label: "Middle Name(s) (DAD):", name: "middle_name"}, 
+            {label: "Middle Name(s) (DAD):", name: "middle_name",value:"NONE"}, 
             {label: "Name Suffix (DCU):", name: "name_suffix"},
             {label: "Date of Birth (DBB):", name: "dob", placeholder: "MMDDYYYY", calculable: true},
             {label: "Document Expiration Date (DBA):", name: "expiry_date", placeholder: "MMDDYYYY", calculable: true},
@@ -61,15 +61,15 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             {label: "Eye Color (DAY):", name: "eye_color", type: 'combobox', options: ["BLK", "BLU", "BRO","BNR", "GRY", "GRN", "HAZ", "MAR", "PNK"],value: "BLK"},
             {label: "Height (DAU):", name: "height", placeholder: "e.g., '068 in'"},
             {label: "Hair Color (DAZ):", name: "hair_color", type: 'combobox', options: ["BLK", "BRO", "BLN", "RED", "WHI", "GRY", "SDY", "BAL"], value: "BRO"},
-            {label: "Race/Ethnicity (DCL):", name: "race", type: 'combobox', options: [" ","AI", "AP", "BK", "H", "O", "U", "W"]},
+            {label: "Race/Ethnicity (DCL):", name: "race", type: 'combobox', options: [" ","UNK", "IND", "ASN", "BLK", "HIS", "OTH", "UNK", "WHT"]},
             {label: "Weight - Pounds (DAW):", name: "weight_pounds"}, 
             {label: "Weight - Kilograms (DAX):", name: "weight_kg"},
             {label: "Weight Range (DCE):", name: "weight_range", type: 'combobox', options: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]}
         ]},
         "Document Details": { icon: "fa-solid fa-stamp", fields: [
             {label: "Jurisdiction Vehicle Class (DCA):", name: "vehicle_class", value: "F ", type: 'combobox', options: ["A", "B", "C", "M", "F ","O"]},
-            {label: "Jurisdiction Restrictions (DCB):", name: "restrictions"},
-            {label: "Jurisdiction Endorsements (DCD):", name: "endorsements"},
+            {label: "Jurisdiction Restrictions (DCB):", name: "restrictions",value:"NONE"},
+            {label: "Jurisdiction Endorsements (DCD):", name: "endorsements",value:"NONE"},
             {label: "Standard Vehicle Classification (DCM):", name: "std_vehicle_class"},
             {label: "Standard Restriction Code (DCO):", name: "std_restriction"},
             {label: "Standard Endorsement Code (DCN):", name: "std_endorsement"},
@@ -2497,12 +2497,22 @@ const DC_calculate_DD = () => {
     
     function calculateDlSubfileLength(record_data) {
         const field_to_id = {
-            'customer_id': 'DAQ', 'family_name_trunc': 'DDE', 'first_name': 'DAC', 'first_name_trunc': 'DDF', 'middle_name': 'DAD', 'middle_name_trunc': 'DDG',
-            'name_suffix': 'DCU', 'dob': 'DBB', 'expiry_date': 'DBA', 'issue_date': 'DBD', 'family_name': 'DCS', 'document_discriminator': 'DCF',
-            'country': 'DCG', 'street1': 'DAG', 'street2': 'DAH', 'city': 'DAI', 'state': 'DAJ', 'postal_code': 'DAK', 'sex': 'DBC', 'eye_color': 'DAY',
-            'height': 'DAU', 'hair_color': 'DAZ', 'race': 'DCL', 'weight_pounds': 'DAW', 'weight_kg': 'DAX', 'weight_range': 'DCE',
-            'vehicle_class': 'DCA', 'restrictions': 'DCB', 'endorsements': 'DCD', 'std_vehicle_class': 'DCM', 'std_restriction': 'DCO',
-            'std_endorsement': 'DCN', 'compliance_type': 'DDA', 'card_revision_date': 'DDB', 'limited_duration': 'DDD', 'hazmat_expiry': 'DDC',
+            'customer_id': 'DAQ', 
+            'family_name_trunc': 'DDE', 'first_name': 'DAC', 
+            'first_name_trunc': 'DDF', 'middle_name': 'DAD', 
+            'middle_name_trunc': 'DDG',
+            'name_suffix': 'DCU', 'dob': 'DBB', 
+            'expiry_date': 'DBA', 'issue_date': 'DBD', 'family_name': 'DCS',
+             'document_discriminator': 'DCF',
+            'country': 'DCG', 'street1': 'DAG', 'street2': 'DAH', 'city': 'DAI',
+             'state': 'DAJ', 'postal_code': 'DAK', 'sex': 'DBC', 'eye_color': 'DAY',
+            'height': 'DAU', 'hair_color': 'DAZ', 'race': 'DCL', 'weight_pounds': 'DAW',
+             'weight_kg': 'DAX', 'weight_range': 'DCE',
+            'vehicle_class': 'DCA', 
+            'restrictions': 'DCB', 'endorsements': 'DCD',
+             'std_vehicle_class': 'DCM', 'std_restriction': 'DCO',
+            'std_endorsement': 'DCN', 'compliance_type': 'DDA', 'card_revision_date': 'DDB', 
+            'limited_duration': 'DDD', 'hazmat_expiry': 'DDC',
             'under_18': 'DDH', 'under_19': 'DDI', 'under_21': 'DDJ', 'organ_donor': 'DDK', 'veteran': 'DDL',
             'alias_family': 'DBN', 'alias_given': 'DBG', 'alias_suffix': 'DBS', 'place_of_birth': 'DCI',
             'audit_info': 'DCJ', 'inventory_control': 'DCK',
@@ -2520,94 +2530,101 @@ const DC_calculate_DD = () => {
 
 // === BẮT ĐẦU CODE GIẢI PHÁP 1 (DỊCH TỪ PYTHON) ===
 
+// === BẮT ĐẦU CODE THEO CHUẨN AAMVA MỚI NHẤT ===
+
+// === BẮT ĐẦU CODE CUỐI CÙNG (VIẾT LẠI THEO CHUẨN HIỆN ĐẠI) ===
+
 function generateAamvaDataString(record_data) {
-    // Lấy các giá trị header và định dạng chúng, giống hệt Python
-    const dl_length = String(record_data.dl_subfile_length || '0000').padStart(4, '0');
-    // jurisdiction_length không có trong UI của bạn, nên chúng ta bỏ qua phần xử lý ZC...
-
-    // 1. TẠO HEADER THEO ĐÚNG CHUẨN CỦA FILE PYTHON
-    let data = `@\n\u001e\u000dANSI ${String(record_data.iin || '').padEnd(6, ' ')}` +
-               `${String(record_data.aamva_version || '10').padStart(2, '0')}` +
-               `${String(record_data.jurisdiction_version || '00').padStart(2, '0')}` +
-               `${String(record_data.subfile_count || '01').padStart(2, '0')}`;
-
-    // Header của subfile, sử dụng "DL0031" giống hệt Python
-    data += `DL0031${dl_length}`;
-    data += "DL";
-
-    // 2. SẮP XẾP LẠI CÁC TRƯỜNG DỮ LIỆU THEO ĐÚNG THỨ TỰ CỦA FILE PYTHON
-    const data_elements = [
+    // STEP 1: XÂY DỰNG BODY CỦA TỪNG SUBFILE RIÊNG BIỆT
+    
+    // Subfile "DL" - Chứa thông tin chính
+    const dl_elements = [
         ['DAQ', 'customer_id'],
-        ['DDE', 'family_name_trunc'],
-        ['DAC', 'first_name'],
-        ['DDF', 'first_name_trunc'],
-        ['DAD', 'middle_name'],
-        ['DDG', 'middle_name_trunc'],
-        ['DCU', 'name_suffix'],
-        ['DBB', 'dob'],
-        ['DBA', 'expiry_date'],
-        ['DBD', 'issue_date'],
-        ['DCS', 'family_name'], // <-- Vị trí này khác so với code JS cũ
-        ['DCF', 'document_discriminator'],
-        ['DCG', 'country'],
+         ['DCS', 'family_name'], 
+         ['DAC', 'first_name'], ['DAD', 'middle_name'],
+        ['DBD', 'issue_date'], ['DBB', 'dob'], 
+        ['DBA','expiry_date'], ['DBC', 'sex'],
+        ['DAY', 'eye_color'], ['DAU', 'height'], 
+        ['DAZ', 'hair_color'], 
         ['DAG', 'street1'],
-        ['DAH', 'street2'],
-        ['DAI', 'city'],
-        ['DAJ', 'state'],
-        ['DAK', 'postal_code'],
-        ['DBC', 'sex'],
-        ['DAY', 'eye_color'],
-        ['DAU', 'height'],
-        ['DAZ', 'hair_color'],
-        ['DCL', 'race'],
-        ['DAW', 'weight_pounds'],
-        ['DAX', 'weight_kg'],
-        ['DCE', 'weight_range'],
-        ['DCA', 'vehicle_class'],
-        ['DCB', 'restrictions'],
-        ['DCD', 'endorsements'],
-        ['DCM', 'std_vehicle_class'],
-        ['DCO', 'std_restriction'],
-        ['DCN', 'std_endorsement'],
-        // Các trường document_details khác
+        ['DAI', 'city'], ['DAJ', 'state'], s
+        ['DAK', 'postal_code'], ['DCG', 'country'],
+        ['DDE', 'family_name_trunc'], ['DDF', 'first_name_trunc'], 
+        ['DDG', 'middle_name_trunc'],
+        ['DCF', 'document_discriminator'], ['DCK', 'inventory_control'], 
         ['DDA', 'compliance_type'],
         ['DDB', 'card_revision_date'],
-        ['DDD', 'limited_duration'],
-        ['DDC', 'hazmat_expiry'],
-        ['DDH', 'under_18'],
-        ['DDI', 'under_19'],
-        ['DDJ', 'under_21'],
-        ['DDK', 'organ_donor'],
-        ['DDL', 'veteran'],
-        // Các trường optional & jurisdiction-specific
-        ['DBN', 'alias_family'],
-        ['DBG', 'alias_given'],
-        ['DBS', 'alias_suffix'],
-        ['DCI', 'place_of_birth'],
-        ['DCJ', 'audit_info'],
-        ['DCK', 'inventory_control'],
-        ['IOE', 'issuing_office'] // Trường này bạn tự thêm, giữ lại
+        ['DCB', 'restrictions'], ['DCD', 'endorsements'],
+        ['DCA', 'vehicle_class'], ['DCM', 'std_vehicle_class'],['DAW', 'weight_pounds'],
+        ['DAX', 'weight_kg'], ['DCE', 'weight_range'],
+        ['DCI', 'place_of_birth'], ['DCJ', 'audit_info'],
+        ['DDH', 'under_18'], ['DDI', 'under_19'], ['DDJ', 'under_21'],
+        ['DDK', 'organ_donor'], ['DDL', 'veteran'],
+        ['DBN', 'alias_family'], ['DBG', 'alias_given'], ['DBS', 'alias_suffix'],
+        ['IOE', 'issuing_office']
     ];
     
-    // 3. NỐI CÁC TRƯỜNG DỮ LIỆU VÀO, MỖI TRƯỜNG KÈM THEO '\n'
-    // Logic này đảm bảo DAQ được nối liền sau DL và không bị trùng
-    for (const [element_id, field_name] of data_elements) {
-        let value = String(record_data[field_name] || '').trim();
-        if (value) {
-            data += `${element_id}${value}\n`;
-        }
+    // Subfile "ZC" - Chứa thông tin phụ, riêng của tiểu bang
+    const zc_elements = [
+        ['ZCA', 'hair_color'], // Ví dụ, một số bang lặp lại thông tin ở đây
+        ['ZCB', 'eye_color']
+        // Bạn có thể thêm các trường ZC khác ở đây nếu cần
+    ];
+
+    let dl_parts = [];
+    for (const [id, key] of dl_elements) {
+        let value = String(record_data[key] || '').trim();
+        if (value) dl_parts.push(id + value);
     }
-    
-    // Xóa ký tự '\n' thừa ở cuối nếu có
-    if (data.endsWith('\n')) {
-        data = data.slice(0, -1);
+    const dl_body = dl_parts.join('\n');
+
+    let zc_parts = [];
+    for (const [id, key] of zc_elements) {
+        let value = String(record_data[key] || '').trim();
+        if (value) zc_parts.push(id + value);
     }
+    const zc_body = zc_parts.join('\n');
+
+    // STEP 2: TÍNH TOÁN CÁC THÔNG SỐ (LENGTH, OFFSET, SUBFILE COUNT)
+    const dl_length = dl_body.length + 1; // +1 cho ký tự kết thúc \u000d
+    const zc_length = zc_body ? zc_body.length + 1 : 0;
     
-    // 4. THÊM KÝ TỰ KẾT THÚC
-    data += "\u000d";
-    
-    return data;
+    const dl_offset = 41; // Đây là vị trí bắt đầu chuẩn cho subfile đầu tiên
+    const zc_offset = dl_offset + dl_length;
+
+    let subfile_count = 0;
+    if (dl_length > 1) subfile_count++;
+    if (zc_length > 1) subfile_count++;
+
+    // STEP 3: TẠO HEADER HOÀN CHỈNH
+    let header = `@\n\u001e\u000dANSI ${String(record_data.iin || '').padEnd(6, ' ')}` +
+                 `${String(record_data.aamva_version || '09').padStart(2, '0')}` +
+                 `${String(record_data.jurisdiction_version || '01').padStart(2, '0')}` +
+                 `${String(subfile_count).padStart(2, '0')}`;
+
+    // Thêm mô tả cho từng subfile vào header
+    if (dl_length > 1) {
+        header += `DL${String(dl_offset).padStart(4, '0')}${String(dl_length).padStart(4, '0')}`;
+    }
+    if (zc_length > 1) {
+        header += `ZC${String(zc_offset).padStart(4, '0')}${String(zc_length).padStart(4, '0')}`;
+    }
+    header += "DL"; // Thẻ đánh dấu kết thúc header subfiles
+
+    // STEP 4: GHÉP NỐI TẤT CẢ LẠI THÀNH CHUỖI CUỐI CÙNG
+    let final_body_parts = [];
+    if (dl_body) final_body_parts.push(dl_body);
+    if (zc_body) final_body_parts.push(zc_body);
+
+    const final_body = final_body_parts.join('\n');
+    const final_string = header + final_body + "\u000d";
+
+    return final_string;
 }
+
+// === KẾT THÚC CODE CUỐI CÙNG ===
+
+// === KẾT THÚC CODE THEO CHUẨN AAMVA MỚI NHẤT ===
 
 // === KẾT THÚC CODE GIẢI PHÁP 1 ===
 /*Giải pháp 2: Code theo chuẩn AAMVA mới nhất (Khuyến nghị cho tương lai)
