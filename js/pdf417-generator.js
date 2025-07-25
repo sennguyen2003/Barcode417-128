@@ -555,28 +555,33 @@ $$  $$ $$  $$ $$     $$  $$ $$  $$ $$  $$ $$  $$ $$  $$
         a417_fields.document_discriminator.value = getRandomNumericString(7);
 
     };
-     const CO_calculate_ICN = () => {
-        const issueDateStr = a417_fields.issue_date.value;
-        if (!issueDateStr || issueDateStr.length !== 8) {
-            showInputDataAlert("CO ICN calculation error: An incorrect issue date is provided!");
-            return;
-        }
+   // === HÀM MỚI DÀNH CHO COLORADO ===
 
-        const issueDate = new Date(
-            parseInt(issueDateStr.slice(4, 8)),
-            parseInt(issueDateStr.slice(0, 2)) - 1,
-            parseInt(issueDateStr.slice(2, 4))
-        );
-        issueDate.setDate(issueDate.getDate() + 1);
+const CO_calculate_audit_info = () => {
+    const issueDateStr = a417_fields.issue_date.value;
+    if (!issueDateStr || issueDateStr.length !== 8) {
+        // Cập nhật thông báo lỗi cho rõ ràng hơn
+        showInputDataAlert("CO Audit Info calculation error: An incorrect issue date is provided!");
+        return;
+    }
 
-        const month = (issueDate.getMonth() + 1).toString().padStart(2, '0');
-        const day = issueDate.getDate().toString().padStart(2, '0');
-        const year = issueDate.getFullYear().toString().slice(-2); // Get last 2 digits of year
+    // Logic tính toán ngày tháng giữ nguyên
+    const issueDate = new Date(
+        parseInt(issueDateStr.slice(4, 8)),
+        parseInt(issueDateStr.slice(0, 2)) - 1,
+        parseInt(issueDateStr.slice(2, 4))
+    );
+    issueDate.setDate(issueDate.getDate() + 1);
 
-        const formattedDate = `${month}${day}${year}`; // MMDDYY format
+    const month = (issueDate.getMonth() + 1).toString().padStart(2, '0');
+    const day = issueDate.getDate().toString().padStart(2, '0');
+    const year = issueDate.getFullYear().toString().slice(-2); // Lấy 2 số cuối của năm
 
-        a417_fields.inventory_control.value = `CODL_0_${formattedDate}_${getRandomNumericString(5)}`;
-    };
+    const formattedDate = `${month}${day}${year}`; // Định dạng MMDDYY
+
+    // === THAY ĐỔI QUAN TRỌNG: GÁN KẾT QUẢ VÀO Ô "AUDIT INFO" ===
+    a417_fields.audit_info.value = `CODL_0_${formattedDate}_${getRandomNumericString(5)}`;
+};
     /*function CO_calculate_AUDIT() {
     var issueDate = document.getElementById("inputIssueDate").value;
     if (issueDate.length != 8) {
@@ -716,13 +721,23 @@ $$$$$$ $$$$$$ $$ $ $ $$$$$$   $$     $$
 $$  $$ $$  $$ $$$$$$ $$  $$   $$     $$
 $$  $$ $$  $$  $$ $$ $$  $$ $$$$$$ $$$$$$
 */  const HI_calculate_documentNumber = () => { a417_fields.customer_id.value = "H00" + getRandomNumericString(6); };
-const HI_calculate_ICN = () => {
+// === HÀM MỚI DÀNH CHO HAWAII ===
+
+const HI_calculate_audit_info = () => {
     const issueDate = a417_fields.issue_date.value;
-    if (!issueDate || issueDate.length !== 8) { showInputDataAlert("HI ICN Error: Incorrect issue date."); return; }
+    if (!issueDate || issueDate.length !== 8) { 
+        // Cập nhật thông báo lỗi cho rõ ràng
+        showInputDataAlert("HI Audit Info Error: Incorrect issue date."); 
+        return; 
+    }
+    
+    // Logic tính toán ngày tháng giữ nguyên
     const d = new Date(issueDate.slice(-4), parseInt(issueDate.slice(0,2)) - 1, parseInt(issueDate.slice(2,4)));
     d.setDate(d.getDate() + 6);
     const formattedDate = ("0" + (d.getMonth() + 1)).slice(-2) + ("0" + d.getDate()).slice(-2) + d.getFullYear();
-    a417_fields.inventory_control.value = issueDate.slice(-4) + formattedDate.slice(0,4) + "_106336_2_1" + getRandomNumericString(2);
+    
+    // === THAY ĐỔI QUAN TRỌNG: GÁN KẾT QUẢ VÀO Ô "AUDIT INFO" ===
+    a417_fields.audit_info.value = issueDate.slice(-4) + formattedDate.slice(0,4) + "_106336_2_1" + getRandomNumericString(2);
 };
 
 const HI_calculate_DD = () => {
@@ -915,6 +930,13 @@ $$$$$$ $$  $$ $$$$$  $$$$$$ $$  $$ $$  $$ $$  $$
         
         a417_fields.document_discriminator.value = `${formattedDate}${officeCode}00${getRandomNumericString(3)}`;
     };
+    // === HÀM MỚI DÀNH CHO INDIANA ===
+
+const IN_calculate_issuing_office = () => {
+    // Logic này tạo ra một số ngẫu nhiên từ 21 đến 35, và thêm số "0" vào phía trước.
+    // Ví dụ: 021, 028, 035...
+    a417_fields.issuing_office.value = "0" + getRandomInt(21, 35).toString();
+};
     
 /*
 $$  $$  $$$$  $$  $$  $$$$   $$$$   $$$$
@@ -2061,20 +2083,25 @@ $$$$$$ $$  $$     $$ $$  $$   $$   $$  $$ $$  $$   $$   $$  $$ $$  $$
         }
         a417_fields.customer_id.value = "WDL" + random_string + "B";
     };
-    const WA_calculate_ICN = () => {
-        const issueDate = a417_fields.issue_date.value;
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("WA ICN calculation error: Incorrect issue date!");
-            return;
-        }
-        a417_fields.inventory_control.value = 
-            getRandomLetter() +
-            issueDate.slice(0, 2) + 
-            issueDate.slice(2, 4) + 
-            issueDate.slice(-2) + 
-            "98" + 
-            getRandomNumericString(4);
-    };
+   // === HÀM MỚI DÀNH CHO WASHINGTON ===
+
+const WA_calculate_audit_info = () => {
+    const issueDate = a417_fields.issue_date.value;
+    if (!issueDate || issueDate.length !== 8) {
+        // Cập nhật thông báo lỗi cho rõ ràng
+        showInputDataAlert("WA Audit Info calculation error: Incorrect issue date!");
+        return;
+    }
+    
+    // === THAY ĐỔI QUAN TRỌNG: GÁN KẾT QUẢ VÀO Ô "AUDIT INFO" ===
+    a417_fields.audit_info.value = 
+        getRandomLetter() +
+        issueDate.slice(0, 2) + 
+        issueDate.slice(2, 4) + 
+        issueDate.slice(-2) + 
+        "98" + 
+        getRandomNumericString(4);
+};
     const WA_calculate_DD = () => {
         const docNum = a417_fields.customer_id.value;
         let inventory_control = a417_fields.inventory_control.value;
@@ -2257,16 +2284,18 @@ const DC_calculate_DD = () => {
             'AR': { customer_id: AR_calculate_documentNumber, inventory_control: AR_calculate_ICN, document_discriminator: AR_calculate_DD },
             'AZ': { customer_id: AZ_calculate_documentNumber, inventory_control: AZ_calculate_ICN, document_discriminator: AZ_calculate_DD },
             'CA': { customer_id: CA_calculate_documentNumber, inventory_control: CA_calculate_ICN, document_discriminator: CA_calculate_DD },
-            'CO': { customer_id: CO_calculate_documentNumber, inventory_control: CO_calculate_ICN, document_discriminator: CO_calculate_DD },
+            'CO': { customer_id: CO_calculate_documentNumber, audit_info: CO_calculate_audit_info, document_discriminator: CO_calculate_DD },
             'CT': { customer_id: CT_calculate_documentNumber, inventory_control: CT_calculate_ICN, document_discriminator: CT_calculate_DD },
             'DE': { customer_id: DE_calculate_documentNumber, inventory_control: DE_calculate_ICN, document_discriminator: DE_calculate_DD },
             'FL': { customer_id: FL_calculate_documentNumber, inventory_control: FL_calculate_ICN, document_discriminator: FL_calculate_DD },
             'GA': { customer_id: GA_calculate_documentNumber, inventory_control: GA_calculate_ICN, document_discriminator: GA_calculate_DD  },
-            'HI': { customer_id: HI_calculate_documentNumber, inventory_control: HI_calculate_ICN, document_discriminator: HI_calculate_DD},
-            'IA': {customer_id: IA_calculate_documentNumber, inventory_control: IA_calculate_ICN, document_discriminator: IA_calculate_DD},            'ID': { customer_id: ID_calculate_documentNumber, inventory_control: ID_calculate_ICN, document_discriminator: ID_calculate_DD },
+            'HI': { customer_id: HI_calculate_documentNumber, audit_info: HI_calculate_audit_info, document_discriminator: HI_calculate_DD},
+            'IA': {customer_id: IA_calculate_documentNumber, inventory_control: IA_calculate_ICN, document_discriminator: IA_calculate_DD},            
+            'ID': { customer_id: ID_calculate_documentNumber, inventory_control: ID_calculate_ICN, document_discriminator: ID_calculate_DD },
             'IL': { customer_id: IL_calculate_documentNumber, inventory_control: IL_calculate_ICN, document_discriminator: IL_calculate_DD },
-            'IN': { customer_id: IN_calculate_documentNumber, inventory_control: IN_calculate_ICN, document_discriminator: IN_calculate_DD },
-            'KS': { customer_id: KS_calculate_documentNumber, inventory_control: KS_calculate_ICN, document_discriminator: KS_calculate_DD },            'KY': { customer_id: KY_calculate_documentNumber, inventory_control: KY_calculate_ICN, document_discriminator: KY_calculate_DD },
+'IN': { customer_id: IN_calculate_documentNumber, inventory_control: IN_calculate_ICN, document_discriminator: IN_calculate_DD, issuing_office: IN_calculate_issuing_office },            
+'KS': { customer_id: KS_calculate_documentNumber, inventory_control: KS_calculate_ICN, document_discriminator: KS_calculate_DD },            
+            'KY': { customer_id: KY_calculate_documentNumber, inventory_control: KY_calculate_ICN, document_discriminator: KY_calculate_DD },
             'LA': { customer_id: LA_calculate_documentNumber, inventory_control: LA_calculate_ICN, audit_info: LA_calculate_audit_info, issuing_office: LA_calculate_issuing_office }, 
             'MD': { customer_id: MD_calculate_documentNumber, inventory_control: MD_calculate_ICN, document_discriminator: MD_calculate_DD },
             'ME': { customer_id: ME_calculate_documentNumber, inventory_control: ME_calculate_ICN, document_discriminator: ME_calculate_DD },
@@ -2295,7 +2324,7 @@ const DC_calculate_DD = () => {
             'UT': { customer_id: UT_calculate_documentNumber, inventory_control: UT_calculate_ICN, document_discriminator: UT_calculate_DD },
             'VA': { customer_id: VA_calculate_documentNumber, inventory_control: VA_calculate_ICN, document_discriminator: VA_calculate_DD },
             'VT': { customer_id: VT_calculate_documentNumber, document_discriminator: VT_calculate_DD },
-            'WA': { customer_id: WA_calculate_documentNumber, inventory_control: WA_calculate_ICN, document_discriminator: WA_calculate_DD },
+            'WA': { customer_id: WA_calculate_documentNumber, audit_info: WA_calculate_audit_info, document_discriminator: WA_calculate_DD },
             'WI': { customer_id: WI_calculate_documentNumber, inventory_control: WI_calculate_ICN, document_discriminator: WI_calculate_DD },
             'WV': { customer_id: WV_calculate_documentNumber, inventory_control: WV_calculate_ICN, document_discriminator: WV_calculate_DD },
             'WY': { customer_id: WY_calculate_documentNumber, inventory_control: WY_calculate_ICN_and_DD, document_discriminator: WY_calculate_ICN_and_DD 
@@ -2447,6 +2476,9 @@ const DC_calculate_DD = () => {
                     'Card Revision Date': 'card_revision_date', 'Organ Donor': 'organ_donor', 'Veteran': 'veteran',
                     'Compliance Type': 'compliance_type', 'Limited Duration': 'limited_duration', 'HAZMAT Expiry': 'hazmat_expiry',
                     'Under 18 Until': 'under_18', 'Under 19 Until': 'under_19', 'Under 21 Until': 'under_21',
+                    'Standard Vehicle Classification': 'std_vehicle_class',
+                    'Standard Restriction': 'std_restriction',
+                    'Standard Endorsement': 'std_endorsement',
                     // Jurisdiction-Specific
                     'Inventory control': 'inventory_control', 'Audit Information': 'audit_info', 'Place of Birth': 'place_of_birth',
                     'Issuing Office': 'issuing_office',
@@ -2498,7 +2530,8 @@ const DC_calculate_DD = () => {
     function calculateDlSubfileLength(record_data) {
         const field_to_id = {
             'customer_id': 'DAQ', 
-            'family_name_trunc': 'DDE', 'first_name': 'DAC', 
+            'family_name_trunc': 'DDE', 
+            'first_name': 'DAC', 
             'first_name_trunc': 'DDF', 'middle_name': 'DAD', 
             'middle_name_trunc': 'DDG',
             'name_suffix': 'DCU', 'dob': 'DBB', 
@@ -2510,7 +2543,8 @@ const DC_calculate_DD = () => {
              'weight_kg': 'DAX', 'weight_range': 'DCE',
             'vehicle_class': 'DCA', 
             'restrictions': 'DCB', 'endorsements': 'DCD',
-             'std_vehicle_class': 'DCM', 'std_restriction': 'DCO',
+             'std_vehicle_class': 'DCM', 
+             'std_restriction': 'DCO',
             'std_endorsement': 'DCN', 'compliance_type': 'DDA', 'card_revision_date': 'DDB', 
             'limited_duration': 'DDD', 'hazmat_expiry': 'DDC',
             'under_18': 'DDH', 'under_19': 'DDI', 'under_21': 'DDJ', 'organ_donor': 'DDK', 'veteran': 'DDL',
@@ -2550,7 +2584,8 @@ function generateAamvaDataString(record_data) {
         ['DAY', 'eye_color'],
          ['DAU', 'height'], 
          ['DAZ', 'hair_color'], 
-        ['DAG', 'street1'],
+        ['DAG', 'street1'], 
+        ['DAH', 'street2'],
         ['DAI', 'city'], 
         ['DAJ', 'state'], 
         ['DAK', 'postal_code'], 
@@ -2566,6 +2601,10 @@ function generateAamvaDataString(record_data) {
         ['DCD', 'endorsements'],
         ['DCA', 'vehicle_class'], 
         ['DCM', 'std_vehicle_class'],
+        ['DCO', 'std_restriction'],
+        ['DCN', 'std_endorsement'], 
+        ['DDD', 'limited_duration'], 
+        ['DDC', 'hazmat_expiry'],
         ['DAW', 'weight_pounds'],
         ['DAX', 'weight_kg'], 
         ['DCE', 'weight_range'],
