@@ -45,9 +45,9 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             {label: "Customer ID Number (DAQ):", name: "customer_id", calculable: true}, 
             {label: "Document Discriminator (DCF):", name: "document_discriminator", calculable: true},
             {label: "Country Identification (DCG):", name: "country", value: "USA"},
-            {label: "Family Name Truncation (DDE):", name: "family_name_trunc", type: 'combobox', options: [" ","N", "T", "U"]},
-            {label: "First Name Truncation (DDF):", name: "first_name_trunc", type: 'combobox', options: [" ","N", "T", "U"]},
-            {label: "Middle Name Truncation (DDG):", name: "middle_name_trunc", type: 'combobox', options: [" ","N", "T", "U"]}
+            {label: "Family Name Truncation (DDE):", name: "family_name_trunc", type: 'combobox', options: ["N", "T", "U"],value: "N "},
+            {label: "First Name Truncation (DDF):", name: "first_name_trunc", type: 'combobox', options: ["N", "T", "U"],value: "N "},
+            {label: "Middle Name Truncation (DDG):", name: "middle_name_trunc", type: 'combobox', options: ["N", "T", "U"],value: "N "}
         ]},
         "Address Information": { icon: "fa-solid fa-location-dot", fields: [
             {label: "Street 1 (DAG):", name: "street1"}, 
@@ -58,29 +58,29 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         ]},
         "Physical Description": { icon: "fa-solid fa-person", fields: [
             {label: "Sex (DBC):", name: "sex", type: 'combobox', options: [["1", "1-Male"], ["2", "2-Female"], ["9", "9-Unknown"]]},
-            {label: "Eye Color (DAY):", name: "eye_color", type: 'combobox', options: ["BLK", "BLU", "BRO","BNR", "GRY", "GRN", "HAZ", "MAR", "PNK"]},
+            {label: "Eye Color (DAY):", name: "eye_color", type: 'combobox', options: ["BLK", "BLU", "BRO","BNR", "GRY", "GRN", "HAZ", "MAR", "PNK"],value: "BLK"},
             {label: "Height (DAU):", name: "height", placeholder: "e.g., '068 in'"},
-            {label: "Hair Color (DAZ):", name: "hair_color", type: 'combobox', options: ["BLK", "BRO", "BLN", "RED", "WHI", "GRY", "SDY", "BAL"]},
+            {label: "Hair Color (DAZ):", name: "hair_color", type: 'combobox', options: ["BLK", "BRO", "BLN", "RED", "WHI", "GRY", "SDY", "BAL"], value: "BRO"},
             {label: "Race/Ethnicity (DCL):", name: "race", type: 'combobox', options: [" ","AI", "AP", "BK", "H", "O", "U", "W"]},
             {label: "Weight - Pounds (DAW):", name: "weight_pounds"}, 
             {label: "Weight - Kilograms (DAX):", name: "weight_kg"},
             {label: "Weight Range (DCE):", name: "weight_range", type: 'combobox', options: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]}
         ]},
         "Document Details": { icon: "fa-solid fa-stamp", fields: [
-            {label: "Jurisdiction Vehicle Class (DCA):", name: "vehicle_class"},
+            {label: "Jurisdiction Vehicle Class (DCA):", name: "vehicle_class", value: "F ", type: 'combobox', options: ["A", "B", "C", "M", "F ","O"]},
             {label: "Jurisdiction Restrictions (DCB):", name: "restrictions"},
             {label: "Jurisdiction Endorsements (DCD):", name: "endorsements"},
             {label: "Standard Vehicle Classification (DCM):", name: "std_vehicle_class"},
             {label: "Standard Restriction Code (DCO):", name: "std_restriction"},
             {label: "Standard Endorsement Code (DCN):", name: "std_endorsement"},
-            {label: "Compliance Type (DDA):", name: "compliance_type", type: 'combobox', options: [" ","F", "N"]},
-            {label: "Card Revision Date (DDB):", name: "card_revision_date", placeholder: "MMDDYYYY"},
+            {label: "Compliance Type (DDA):", name: "compliance_type", type: 'combobox', options: [" ","F", "N"], value: "F"},
+            {label: "Card Revision Date (DDB):", name: "card_revision_date", placeholder: "MMDDYYYY",value: "09122021"},
             {label: "Limited Duration Indicator (DDD):", name: "limited_duration", type: 'combobox', options: ["0", "1"]},
             {label: "HAZMAT Endorsement Expiry (DDC):", name: "hazmat_expiry", placeholder: "MMDDYYYY"},
             {label: "Under 18 Until (DDH):", name: "under_18", placeholder: "MMDDYYYY"},
             {label: "Under 19 Until (DDI):", name: "under_19", placeholder: "MMDDYYYY"},
             {label: "Under 21 Until (DDJ):", name: "under_21", placeholder: "MMDDYYYY"},
-            {label: "Organ Donor Indicator (DDK):", name: "organ_donor", type: 'combobox', options: ["0", "1"]},
+            {label: "Organ Donor Indicator (DDK):", name: "organ_donor", type: 'combobox', options: ["0", "1"],value: "0"},
             {label: "Veteran Indicator (DDL):", name: "veteran", type: 'combobox', options: ["0", "1"]}
         ]},
              "Jurisdiction-Specific Fields": { icon: "fa-solid fa-flag-usa", fields: [
@@ -2296,7 +2296,7 @@ const DC_calculate_DD = () => {
             'VA': { customer_id: VA_calculate_documentNumber, inventory_control: VA_calculate_ICN, document_discriminator: VA_calculate_DD },
             'VT': { customer_id: VT_calculate_documentNumber, document_discriminator: VT_calculate_DD },
             'WA': { customer_id: WA_calculate_documentNumber, inventory_control: WA_calculate_ICN, document_discriminator: WA_calculate_DD },
-            'WI': { inventory_control: WI_calculate_ICN, document_discriminator: WI_calculate_DD },
+            'WI': { customer_id: WI_calculate_documentNumber, inventory_control: WI_calculate_ICN, document_discriminator: WI_calculate_DD },
             'WV': { customer_id: WV_calculate_documentNumber, inventory_control: WV_calculate_ICN, document_discriminator: WV_calculate_DD },
             'WY': { customer_id: WY_calculate_documentNumber, inventory_control: WY_calculate_ICN_and_DD, document_discriminator: WY_calculate_ICN_and_DD 
 }
@@ -2314,61 +2314,94 @@ const DC_calculate_DD = () => {
         }
         a417_fields.state.value = selectedState;
         
+        // Cập nhật IIN dựa trên tiểu bang được chọn
+        const iin = STATE_IIN_MAP[selectedState] || '636000';
+        a417_fields.iin.value = iin;
 
         a417_fields.sex.value = Math.random() > 0.5 ? "1" : "2";
         fieldGenerators.generic.family_name();
         fieldGenerators.generic.first_name();
         fieldGenerators.generic.dob();
         fieldGenerators.generic.issue_date();
-        fieldGenerators.generic.expiry_date();
+
+        // Gọi hàm tạo ngày hết hạn cụ thể của tiểu bang nếu có, nếu không thì dùng hàm chung
+        const stateSpecificExpiryGenerator = fieldGenerators.specific[selectedState]?.expiry_date;
+        if (stateSpecificExpiryGenerator) {
+            stateSpecificExpiryGenerator();
+        } else {
+            fieldGenerators.generic.expiry_date();
+        }
         
         const cityData = {
             AK: { cities: ["Anchorage", "Fairbanks", "Juneau"], zips: [99501, 99701, 99801]}, AL: { cities: ["Birmingham", "Montgomery", "Huntsville"], zips: [35203, 36104, 35801]},
             AR: { cities: ["Little Rock", "Fort Smith", "Fayetteville"], zips: [72201, 72901, 72701]}, AZ: { cities: ["Phoenix", "Tucson", "Mesa"], zips: [85001, 85701, 85201]},
             CA: { cities: ["Los Angeles", "San Diego", "San Jose"], zips: [90001, 92101, 95101]}, CO: { cities: ["Denver", "Colorado Springs", "Aurora"], zips: [80202, 80903, 80010]},
             CT: { cities: ["Bridgeport", "New Haven", "Hartford"], zips: [6604, 6510, 6103]}, DE: { cities: ["Wilmington", "Dover", "Newark"], zips: [19801, 19901, 19711]},
-            FL: { cities: ["Jacksonville", "Miami", "Tampa"], zips: [32202, 33101, 33602]}, ID: { cities: ["Boise", "Meridian", "Nampa"], zips: [83702, 83642, 83651]},
+            FL: { cities: ["Jacksonville", "Miami", "Tampa"], zips: [32202, 33101, 33602]}, GA: { cities: ["Atlanta", "Augusta", "Columbus"], zips: [30303, 30901, 31901]}, 
+            HI: { cities: ["Honolulu", "Pearl City", "Hilo"], zips: [96813, 96782, 96720]}, IA: { cities: ["Des Moines", "Cedar Rapids", "Davenport"], zips: [50309, 52401, 52801]},
+            ID: { cities: ["Boise", "Meridian", "Nampa"], zips: [83702, 83642, 83651]},
             IL: { cities: ["Chicago", "Aurora", "Joliet"], zips: [60601, 60502, 60431]}, IN: { cities: ["Indianapolis", "Fort Wayne", "Evansville"], zips: [46204, 46802, 47708]},
-            KY: { cities: ["Louisville", "Lexington", "Bowling Green"], zips: [40202, 40507, 42101]}, MA: { cities: ["Boston", "Worcester", "Springfield"], zips: [2108, 1602, 1103]},
-            ME: { cities: ["Portland", "Lewiston", "Bangor"], zips: [4101, 4240, 4401]}, MI: { cities: ["Detroit", "Grand Rapids", "Warren"], zips: [48201, 49503, 48089]},
+            KS: { cities: ["Wichita", "Overland Park", "Kansas City"], zips: [67202, 66204, 66101]}, KY: { cities: ["Louisville", "Lexington", "Bowling Green"], zips: [40202, 40507, 42101]}, 
+            LA: { cities: ["New Orleans", "Baton Rouge", "Shreveport"], zips: [70112, 70802, 71101]}, MA: { cities: ["Boston", "Worcester", "Springfield"], zips: [2108, 1602, 1103]},
+            MD: { cities: ["Baltimore", "Columbia", "Germantown"], zips: [21201, 21044, 20874]}, ME: { cities: ["Portland", "Lewiston", "Bangor"], zips: [4101, 4240, 4401]}, 
+            MI: { cities: ["Detroit", "Grand Rapids", "Warren"], zips: [48201, 49503, 48089]},
             MN: { cities: ["Minneapolis", "Saint Paul", "Rochester"], zips: [55401, 55101, 55901]}, MO: { cities: ["Kansas City", "Saint Louis", "Springfield"], zips: [64105, 63101, 65801]},
             MS: { cities: ["Jackson", "Gulfport", "Southaven"], zips: [39201, 39501, 38671]}, MT: { cities: ["Billings", "Missoula", "Great Falls"], zips: [59101, 59801, 59401]},
-            NC: { cities: ["Charlotte", "Raleigh", "Greensboro"], zips: [28202, 27601, 27401]}, NH: { cities: ["Manchester", "Nashua", "Concord"], zips: [3101, 3060, 3301]},
-            NJ: { cities: ["Newark", "Jersey City", "Paterson"], zips: [7102, 7302, 7501]}, NV: { cities: ["Las Vegas", "Henderson", "Reno"], zips: [89101, 89002, 89501]},
+            NC: { cities: ["Charlotte", "Raleigh", "Greensboro"], zips: [28202, 27601, 27401]}, ND: { cities: ["Fargo", "Bismarck", "Grand Forks"], zips: [58102, 58501, 58201]},
+            NE: { cities: ["Omaha", "Lincoln", "Bellevue"], zips: [68102, 68508, 68005]}, NH: { cities: ["Manchester", "Nashua", "Concord"], zips: [3101, 3060, 3301]},
+            NJ: { cities: ["Newark", "Jersey City", "Paterson"], zips: [7102, 7302, 7501]}, NM: { cities: ["Albuquerque", "Las Cruces", "Rio Rancho"], zips: [87102, 88001, 87124]},
+            NV: { cities: ["Las Vegas", "Henderson", "Reno"], zips: [89101, 89002, 89501]},
             NY: { cities: ["New York", "Buffalo", "Rochester"], zips: [10001, 14201, 14602]}, OH: { cities: ["Columbus", "Cleveland", "Cincinnati"], zips: [43215, 44101, 45202]},
-            OK: { cities: ["Oklahoma City", "Tulsa", "Norman"], zips: [73102, 74103, 73019]}, RI: { cities: ["Providence", "Warwick", "Cranston"], zips: [2903, 2886, 2920]},
+            OK: { cities: ["Oklahoma City", "Tulsa", "Norman"], zips: [73102, 74103, 73019]}, OR: { cities: ["Portland", "Salem", "Eugene"], zips: [97201, 97301, 97401]}, 
+            PA: { cities: ["Philadelphia", "Pittsburgh", "Allentown"], zips: [19102, 15219, 18101]}, RI: { cities: ["Providence", "Warwick", "Cranston"], zips: [2903, 2886, 2920]},
+            SC: { cities: ["Charleston", "Columbia", "North Charleston"], zips: [29401, 29201, 29405]}, SD: { cities: ["Sioux Falls", "Rapid City", "Aberdeen"], zips: [57102, 57701, 57401]},
             TN: { cities: ["Nashville", "Memphis", "Knoxville"], zips: [37201, 38103, 37901]}, TX: { cities: ["Houston", "San Antonio", "Dallas"], zips: [77002, 78205, 75201]},
             UT: { cities: ["Salt Lake City", "West Valley City", "Provo"], zips: [84101, 84119, 84601]}, VA: { cities: ["Virginia Beach", "Norfolk", "Chesapeake"], zips: [23450, 23501, 23320]},
-            WA: { cities: ["Seattle", "Spokane", "Tacoma"], zips: [98101, 99201, 98402]}, WI: { cities: ["Milwaukee", "Madison", "Green Bay"], zips: [53202, 53703, 54301]},
-            WV: { cities: ["Charleston", "Huntington", "Morgantown"], zips: [25301, 25701, 26501]}, WY: { cities: ["Cheyenne", "Casper", "Laramie"], zips: [82001, 82601, 82070]}
+            VT: { cities: ["Burlington", "Essex", "South Burlington"], zips: [5401, 5452, 5403]}, WA: { cities: ["Seattle", "Spokane", "Tacoma"], zips: [98101, 99201, 98402]}, 
+            WI: { cities: ["Milwaukee", "Madison", "Green Bay"], zips: [53202, 53703, 54301]},
+            WV: { cities: ["Charleston", "Huntington", "Morgantown"], zips: [25301, 25701, 26501]}, WY: { cities: ["Cheyenne", "Casper", "Laramie"], zips: [82001, 82601, 82070]},
+            DC: { cities: ["Washington"], zips: [20001, 20002, 20003] }
         };
+
         const currentCityData = cityData[selectedState] || { cities: ["Anytown"], zips: [12345]};
         const randomIndex = Math.floor(Math.random() * currentCityData.cities.length);
         
-        // === BẮT ĐẦU SỬA ĐỔI ===
-        // 1. Tạo riêng từng phần của địa chỉ
-        const streetPart = `${Math.floor(Math.random() * 9000) + 100} ${["Main St", "Oak Ave", "Pine Rd"][Math.floor(Math.random()*3)]}`;
-        const cityPart = currentCityData.cities[randomIndex];
-        const zipPart = String(currentCityData.zips[randomIndex] + Math.floor(Math.random() * 50)).padStart(5,'0');
-
-        // 2. Tạo chuỗi địa chỉ đầy đủ, dùng ký tự '^' để ngăn cách như trong ảnh của bạn
-        const fullAddress = `${streetPart}^${cityPart} ${zipPart}`;
-
-        // 3. Gán toàn bộ chuỗi vào ô Street 1 (trường DAG trong mã vạch)
-        a417_fields.street1.value = fullAddress;
-
-        // 4. Xóa trống các ô City và Postal Code để chúng không được thêm vào mã vạch như các trường riêng lẻ
-        a417_fields.city.value = '';
-        a417_fields.postal_code.value = '';
+        // === BẮT ĐẦU SỬA ĐỔI LOGIC ĐỊA CHỈ ===
+        // Tạo dữ liệu ngẫu nhiên cho từng trường địa chỉ riêng biệt
+        a417_fields.street1.value = `${Math.floor(Math.random() * 9000) + 100} ${["Main St", "Oak Ave", "Pine Rd"][Math.floor(Math.random()*3)]}`;
+        a417_fields.city.value = currentCityData.cities[randomIndex];
+        a417_fields.postal_code.value = String(currentCityData.zips[randomIndex] + Math.floor(Math.random() * 50)).padStart(5,'0');
+        a417_fields.street2.value = ''; // Xóa trống trường street2
         // === KẾT THÚC SỬA ĐỔI ===
         
         a417_fields.height.value = `0${(Math.floor(Math.random() * 16) + 60)}`;
         a417_fields.weight_pounds.value = (Math.floor(Math.random() * 100) + 120).toString();
         
-        ['customer_id', 'inventory_control', 'document_discriminator'].forEach(fieldName => {
-            const generator = (fieldGenerators.specific[selectedState] && fieldGenerators.specific[selectedState][fieldName]) 
-                              || fieldGenerators.generic[fieldName];
-            if(generator) generator();
+        // Thứ tự gọi các hàm generator rất quan trọng, đặc biệt khi các hàm sau phụ thuộc vào kết quả của các hàm trước.
+        const generationOrder = [
+            'dob', // Cần cho một số tính toán DL
+            'family_name', 'first_name', // Cần cho một số tính toán DL
+            'customer_id', // Cần cho ICN/DD
+            'issue_date', 'expiry_date', // Cần cho ICN/DD
+            'inventory_control', 
+            'document_discriminator',
+            'audit_info', // Thêm các trường jurisdiction-specific
+            'issuing_office'
+        ];
+
+        generationOrder.forEach(fieldName => {
+            // Kiểm tra xem có trường này trong form không
+            if (a417_fields[fieldName]) {
+                const generator = (fieldGenerators.specific[selectedState] && fieldGenerators.specific[selectedState][fieldName]) 
+                                  || fieldGenerators.generic[fieldName];
+                if (generator) {
+                    try {
+                        generator();
+                    } catch (e) {
+                        // Bỏ qua lỗi nếu một trường phụ thuộc không có sẵn, vì vòng lặp sẽ xử lý nó
+                    }
+                }
+            }
         });
         
         alert(`Đã tạo dữ liệu ngẫu nhiên cho tiểu bang: ${selectedState}`);
@@ -2395,33 +2428,58 @@ const DC_calculate_DD = () => {
                 if (jsonData.length === 0) { alert("No data found in Excel file."); return; }
                 a417_all_records = [];
                 a417_barcode_images = {};
+                
+                // Mở rộng excelMapping để bao gồm tất cả các trường có thể nhập
                 const excelMapping = {
-                    'Last Name': 'family_name', 'First Name': 'first_name', 'Middle Name': 'middle_name',
-                    'Date of Birth': 'dob', 'Expiration Date': 'expiry_date', 'Issue Date': 'issue_date',
-                    'ID Number': 'customer_id', 'Address 1': 'street1', 'City': 'city', 'State': 'state',
-                    'Postal Code': 'postal_code', 'Sex': 'sex', 'Eye Color': 'eye_color', 'Height': 'height',
-                    'Hair Color': 'hair_color', 'Weight (lbs)': 'weight_pounds', 'Country': 'country',
-                    'Document Discriminator': 'document_discriminator', 'Card Revision Date': 'card_revision_date',
-                    'Inventory control': 'inventory_control', 'Vehicle Class': 'vehicle_class',
+                    // Identification
+                    'Family Name': 'family_name', 'First Name': 'first_name', 'Middle Name(s)': 'middle_name',
+                    'Name Suffix': 'name_suffix', 'Date of Birth': 'dob', 'Expiration Date': 'expiry_date', 
+                    'Issue Date': 'issue_date', 'ID Number': 'customer_id', 'Document Discriminator': 'document_discriminator',
+                    'Country': 'country', 'Family Name Truncation': 'family_name_trunc', 'First Name Truncation': 'first_name_trunc',
+                    'Middle Name Truncation': 'middle_name_trunc',
+                    // Address
+                    'Street 1': 'street1', 'Street 2': 'street2', 'City': 'city', 'State': 'state', 'Postal Code': 'postal_code',
+                    // Physical Description
+                    'Sex': 'sex', 'Eye Color': 'eye_color', 'Height': 'height', 'Hair Color': 'hair_color', 
+                    'Race/Ethnicity': 'race', 'Weight (lbs)': 'weight_pounds', 'Weight (kg)': 'weight_kg', 'Weight Range': 'weight_range',
+                    // Document Details
+                    'Vehicle Class': 'vehicle_class', 'Restrictions': 'restrictions', 'Endorsements': 'endorsements',
+                    'Card Revision Date': 'card_revision_date', 'Organ Donor': 'organ_donor', 'Veteran': 'veteran',
+                    'Compliance Type': 'compliance_type', 'Limited Duration': 'limited_duration', 'HAZMAT Expiry': 'hazmat_expiry',
+                    'Under 18 Until': 'under_18', 'Under 19 Until': 'under_19', 'Under 21 Until': 'under_21',
+                    // Jurisdiction-Specific
+                    'Inventory control': 'inventory_control', 'Audit Information': 'audit_info', 'Place of Birth': 'place_of_birth',
+                    'Issuing Office': 'issuing_office',
+                    // Optional
+                    'Alias Family Name': 'alias_family', 'Alias Given Name': 'alias_given', 'Alias Suffix Name': 'alias_suffix',
+                    // Header
+                     'IIN': 'iin', 'AAMVA Version': 'aamva_version', 'Jurisdiction Version': 'jurisdiction_version',
+                    // Filename
                     'Filename': 'filename'
                 };
+
+
                 jsonData.forEach(row => {
-                    let recordData = getCurrentData();
+                    let recordData = getCurrentData(); // Bắt đầu với dữ liệu mặc định/hiện tại
                      for (const excelHeader in excelMapping) {
-                        if (row[excelHeader] !== undefined) {
-                            const fieldName = excelMapping[excelHeader];
-                            let value = String(row[excelHeader]).trim();
-                            if (['Date of Birth', 'Expiration Date', 'Issue Date'].includes(excelHeader) && value) {
-                                const dt = new Date(value);
-                                if (!isNaN(dt)) {
-                                    value = (dt.getMonth()+1).toString().padStart(2,'0') + dt.getDate().toString().padStart(2,'0') + dt.getFullYear();
+                        const fieldName = excelMapping[excelHeader];
+                        let value = row[excelHeader] !== undefined ? String(row[excelHeader]).trim() : undefined;
+                        
+                        if (value !== undefined) {
+                            if (['Date of Birth', 'Expiration Date', 'Issue Date', 'Card Revision Date', 'HAZMAT Expiry', 'Under 18 Until', 'Under 19 Until', 'Under 21 Until'].includes(excelHeader)) {
+                                // Xử lý các trường ngày tháng, hỗ trợ cả định dạng Excel và MMDDYYYY
+                                if (value && !/^\d{8}$/.test(value)) { // Nếu không phải là MMDDYYYY
+                                    const dt = new Date(Math.round((value - 25569) * 86400 * 1000)); // Chuyển đổi số serial của Excel
+                                    if (!isNaN(dt)) {
+                                        value = getFormattedDate_MMDDYYYY(dt);
+                                    }
                                 }
                             } else if(fieldName === 'sex') {
-    const val_lower = value.toLowerCase();
-    if (['male', 'M', '1', 'nam'].includes(val_lower)) value = "1";
-    else if (['female', 'F', '2', 'nữ'].includes(val_lower)) value = "2";
-    else value = "9";
-}
+                                const val_lower = value.toLowerCase();
+                                if (['male', 'm', '1', 'nam'].includes(val_lower)) value = "1";
+                                else if (['female', 'f', '2', 'nữ'].includes(val_lower)) value = "2";
+                                else value = "9"; // Mặc định là không rõ
+                            }
                             recordData[fieldName] = value;
                         }
                     }
@@ -2438,80 +2496,99 @@ const DC_calculate_DD = () => {
     }
     
     function calculateDlSubfileLength(record_data) {
- const field_to_id = {
-        'customer_id': 'DAQ', 'family_name_trunc': 'DDE', 'first_name': 'DAC', 'first_name_trunc': 'DDF', 'middle_name': 'DAD', 'middle_name_trunc': 'DDG',
-        'name_suffix': 'DCU', 'dob': 'DBB', 'expiry_date': 'DBA', 'issue_date': 'DBD', 'family_name': 'DCS', 'document_discriminator': 'DCF',
-        'country': 'DCG', 'street1': 'DAG', 'street2': 'DAH', 'city': 'DAI', 'state': 'DAJ', 'postal_code': 'DAK', 'sex': 'DBC', 'eye_color': 'DAY',
-        'height': 'DAU', 'hair_color': 'DAZ', 'race': 'DCL', 'weight_pounds': 'DAW', 'weight_kg': 'DAX', 'weight_range': 'DCE',
-        'vehicle_class': 'DCA', 'restrictions': 'DCB', 'endorsements': 'DCD', 'std_vehicle_class': 'DCM', 'std_restriction': 'DCO',
-        'std_endorsement': 'DCN', 'vehicle_class_desc': 'DCP', 'restriction_desc': 'DCR', 'endorsement_desc': 'DCQ',
-        'compliance_type': 'DDA', 'card_revision_date': 'DDB', 'limited_duration': 'DDD', 'hazmat_expiry': 'DDC',
-        'under_18': 'DDH', 'under_19': 'DDI', 'under_21': 'DDJ', 'organ_donor': 'DDK', 'veteran': 'DDL',
-        'alias_family': 'DBN', 'alias_given': 'DBG', 'alias_suffix': 'DBS', 'place_of_birth': 'DCI',
-        'audit_info': 'DCJ', 'inventory_control': 'DCK',
-        // === THÊM DÒNG NÀY VÀO ===
-        'issuing_office': 'IOE'
-        // =======================
-    };        let total_length = 1; 
+        const field_to_id = {
+            'customer_id': 'DAQ', 'family_name_trunc': 'DDE', 'first_name': 'DAC', 'first_name_trunc': 'DDF', 'middle_name': 'DAD', 'middle_name_trunc': 'DDG',
+            'name_suffix': 'DCU', 'dob': 'DBB', 'expiry_date': 'DBA', 'issue_date': 'DBD', 'family_name': 'DCS', 'document_discriminator': 'DCF',
+            'country': 'DCG', 'street1': 'DAG', 'street2': 'DAH', 'city': 'DAI', 'state': 'DAJ', 'postal_code': 'DAK', 'sex': 'DBC', 'eye_color': 'DAY',
+            'height': 'DAU', 'hair_color': 'DAZ', 'race': 'DCL', 'weight_pounds': 'DAW', 'weight_kg': 'DAX', 'weight_range': 'DCE',
+            'vehicle_class': 'DCA', 'restrictions': 'DCB', 'endorsements': 'DCD', 'std_vehicle_class': 'DCM', 'std_restriction': 'DCO',
+            'std_endorsement': 'DCN', 'compliance_type': 'DDA', 'card_revision_date': 'DDB', 'limited_duration': 'DDD', 'hazmat_expiry': 'DDC',
+            'under_18': 'DDH', 'under_19': 'DDI', 'under_21': 'DDJ', 'organ_donor': 'DDK', 'veteran': 'DDL',
+            'alias_family': 'DBN', 'alias_given': 'DBG', 'alias_suffix': 'DBS', 'place_of_birth': 'DCI',
+            'audit_info': 'DCJ', 'inventory_control': 'DCK',
+            'issuing_office': 'IOE'
+        };
+        let total_length = 1; 
         for (const field_name in field_to_id) {
             const value = record_data[field_name] || '';
             if (value) total_length += field_to_id[field_name].length + String(value).length + 1;
         }
         return total_length;     
     }
-    //////////////////chỗ hiện thị khi quét
+    
     function generateAamvaDataString(record_data) {
-           const dl_length = String(record_data.dl_subfile_length || '0').padStart(4, '0');
+        const dl_length = String(record_data.dl_subfile_length || '0').padStart(4, '0');
         let data = `@\n\u001e\u000dANSI ${record_data.iin || ''.padEnd(6)}` +
-                   `${(record_data.aamva_version || '').padStart(2, '0')}` +
-                   `${(record_data.jurisdiction_version || '').padStart(2, '0')}` +
-                   `${(record_data.subfile_count || '').padStart(2, '0')}` +
+                   `${(record_data.aamva_version || '10').padStart(2, '0')}` +
+                   `${(record_data.jurisdiction_version || '00').padStart(2, '0')}` +
+                   `${(record_data.subfile_count || '01').padStart(2, '0')}` +
                    `DL0042${dl_length}DL`;
-                   const processed_data = { ...record_data };
-    
-        // === LOGIC HỢP NHẤT ĐỊA CHỈ ===
-        // 1. Kiểm tra xem chuỗi street1 có chứa dấu '^' hay không.
-        //    Nếu có (tức là dữ liệu từ Excel đã đúng định dạng), thì không cần làm gì.
-        // 2. Nếu không chứa dấu '^' VÀ cả city và postal_code đều có giá trị (tức là dữ liệu từ Fill All),
-        //    thì tiến hành ghép chúng lại.
-        if (!processed_data.street1.includes('^') && processed_data.city && processed_data.postal_code) {
-            processed_data.street1 = `${processed_data.street1}^${processed_data.city} ${processed_data.postal_code}`;
-            // Xóa city và postal_code trong bản sao để chúng không bị thêm vào mã vạch một cách riêng lẻ
-            processed_data.city = '';
-            processed_data.postal_code = '';
-        }
-                   data += `DAQ${String(record_data.customer_id || '')}\n`;
+                                      data += `DAQ${String(record_data.customer_id || '')}\n`;
 
+
+        // Danh sách các trường và mã AAMVA tương ứng, theo thứ tự ưu tiên
         const data_elements = [
-        ['DAQ', 'customer_id'],
-        ['DCS', 'family_name'], ['DAC', 'first_name'], ['DAD', 'middle_name'], ['DBD', 'issue_date'],
-        ['DBB', 'dob'], ['DBA', 'expiry_date'], ['DBC', 'sex'], ['DAY', 'eye_color'], ['DAU', 'height'],
-        ['DAG', 'street1'], ['DAI', 'city'], ['DAI', 'state'], ['DAK', 'postal_code'], ['DCF', 'document_discriminator'],
-        ['DCG', 'country'], ['DDE', 'family_name_trunc'], ['DDF', 'first_name_trunc'], ['DDG', 'middle_name_trunc'],
-        ['DCA', 'vehicle_class'],['DCB', 'restrictions'],['DCD', 'endorsements'],['DDB', 'card_revision_date'],
-        ['DDK', 'organ_donor'],
-        // === THÊM TRƯỜNG MỚI VÀO ĐÂY ===
-        ['DCK', 'inventory_control'],
-        ['DCJ', 'audit_info'],
-        ['IOE', 'issuing_office'] // Thêm trường mới
-        // ==============================
-    ];
-            for (const [element_id, field_name] of data_elements) {
-            // Luôn sử dụng dữ liệu đã qua xử lý
-            let value = String(processed_data[field_name] || '');
-    
-            if (field_name === 'sex') {
-                if (value === '1') value = 'M';
-                else if (value === '2') value = 'F';
-            }
-    
-            if (value) {
-                data += `${element_id}${value}\n`;
-            }
+            // Thông tin cá nhân
+            ['DAQ', 'customer_id'],
+            ['DCS', 'family_name'], 
+            ['DAC', 'first_name'], 
+            ['DAD', 'middle_name'], 
+            ['DBD', 'issue_date'], 
+            ['DBB', 'dob'], 
+            ['DBA', 'expiry_date'],
+            // Ngày tháng
+                        ['DBC', 'sex'],
+            ['DAY', 'eye_color'],
+            ['DAU', 'height'],
+            ['DAZ', 'hair_color'],
+
+             ['DCU', 'name_suffix'],
+            // Địa chỉ
+            ['DAG', 'street1'],
+            ['DAH', 'street2'],
+            ['DAI', 'city'],
+            ['DAJ', 'state'],
+            ['DAK', 'postal_code'],
+            // Mô tả vật lý
+            // Thông tin giấy phép
+            ['DCA', 'vehicle_class'],
+            ['DDA', 'compliance_type'],
+            ['DCB', 'restrictions'],
+            ['DCD', 'endorsements'],
+            ['DDK', 'organ_donor'],
+            ['DDL', 'veteran'],
+            // Thông tin hệ thống
+            ['DCF', 'document_discriminator'],
+            ['DCG', 'country'],
+            ['DCK', 'inventory_control'],
+            ['DCJ', 'audit_info'],
+            ['DDB', 'card_revision_date'],
+            // Các trường ít dùng hơn
+            ['DDE', 'family_name_trunc'], ['DDF', 'first_name_trunc'], ['DDG', 'middle_name_trunc'],
+            ['DCL', 'race'],['DAW', 'weight_pounds'],['DAX', 'weight_kg'],['DCE', 'weight_range'],
+            ['DCM', 'std_vehicle_class'],['DCO', 'std_restriction'],['DCN', 'std_endorsement'],
+            ['DDA', 'compliance_type'],['DDD', 'limited_duration'],['DDC', 'hazmat_expiry'],
+            ['DDH', 'under_18'],['DDI', 'under_19'],['DDJ', 'under_21'],
+            ['DBN', 'alias_family'],['DBG', 'alias_given'],['DBS', 'alias_suffix'],['DCI', 'place_of_birth'],
+            ['IOE', 'issuing_office']
+        ];
+            let subfile_parts = [];
+          for (const [element_id, field_name] of data_elements) {
+        let value = String(record_data[field_name] || '');
+        if (value) {
+            subfile_parts.push(element_id + value);
         }
-        data += "\u000d";
-        return data;
     }
+
+    // Nối tất cả các phần tử trong mảng lại với nhau, sử dụng '\n' làm ký tự phân tách
+    // Cách này đảm bảo ký tự '\n' CHỈ xuất hiện GIỮA các phần tử
+    data += subfile_parts.join('\n');
+
+    // Thêm ký tự kết thúc subfile
+    data += "\u000d"; 
+    
+    return data;
+}
     function generateBarcode(dataString, scale, padding) {
         const canvas = document.createElement('canvas');
         try {
@@ -2522,6 +2599,7 @@ const DC_calculate_DD = () => {
             return canvas;
         } catch (e) {
             console.error("Barcode generation error:", e);
+            alert("Lỗi tạo mã vạch: " + e + "\n\nDữ liệu: " + dataString);
             return null;
         }
     }
@@ -2531,7 +2609,6 @@ const DC_calculate_DD = () => {
         const padding = parseInt(document.getElementById('a417-padding-input').value) || 10;
         a417_all_records.forEach((record, index) => {
             const dl_length = calculateDlSubfileLength(record);
-            // SỬA LỖI 2: Sửa lỗi chính tả từ "ApadStart" thành "padStart"
             record.dl_subfile_length = String(dl_length).padStart(4, '0');
             const dataString = generateAamvaDataString(record);
             const canvas = generateBarcode(dataString, scale, padding);
@@ -2565,7 +2642,7 @@ const DC_calculate_DD = () => {
         for(const name in a417_fields) {
             if(a417_fields[name]) a417_fields[name].value = recordData[name] || '';
         }
-        // updateIinBasedOnState(); // KHÔNG CẦN GỌI Ở ĐÂY VÌ SẼ LÀM THAY ĐỔI DỮ LIỆU ĐÃ IMPORT
+        
         if (canvas) {
             barcodePreview.innerHTML = '';
             const img = document.createElement('img');
@@ -2581,11 +2658,18 @@ const DC_calculate_DD = () => {
 
     function displayFormattedData(data) {
         let text = `AAMVA 2020 DL/ID DATA\n====================\n`;
-        text += `NAME: ${data.first_name || ''} ${data.family_name || ''}\n`;
-        text += `DOB: ${data.dob || ''}\n`;
+        text += `NAME: ${data.first_name || ''} ${data.middle_name || ''} ${data.family_name || ''}\n`;
         text += `ADDRESS: ${data.street1 || ''}, ${data.city || ''}, ${data.state || ''} ${data.postal_code || ''}\n`;
         text += `ID: ${data.customer_id || ''}\n`;
-        text += `ISS/EXP: ${data.issue_date || ''} / ${data.expiry_date || ''}\n`;
+        text += `DOB: ${data.dob || ''}\n`;
+        text += `SEX: ${data.sex === '1' ? 'Male' : (data.sex === '2' ? 'Female' : 'Unknown')}\n`;
+        text += `HAIR: ${data.hair_color || ''}\n`;
+        text += `EYES: ${data.eye_color || ''}\n`;
+        text += `HEIGHT: ${data.height || ''}\n`;
+        text += `ISS: ${data.issue_date || ''}\n`;
+        text += `EXP: ${data.expiry_date || ''}\n`;
+        text += `DD: ${data.document_discriminator || ''}\n`;
+        text += `ICN: ${data.inventory_control || ''}\n`;
         formattedDataText.value = text;
     }
 
@@ -2609,40 +2693,38 @@ const DC_calculate_DD = () => {
                 const img = document.createElement('img');
                 img.src = canvas.toDataURL();
                 barcodePreview.appendChild(img);
-                // 2. [THÊM MỚI] Hiển thị dữ liệu văn bản (formatted và raw)
-            displayFormattedData(currentData);
-            rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + dataString.replace(/\n/g, '\\n\n').replace(/\u001e/g, '<RS>').replace(/\u000d/g, '<CR>');
+                
+                displayFormattedData(currentData);
+                rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + dataString.replace(/\n/g, '\\n\n').replace(/\u001e/g, '<RS>').replace(/\u000d/g, '<CR>');
+                
                 const selectedRow = recordsTableBody.querySelector('tr.selected');
-            if (selectedRow) {
-                // Cập nhật bản ghi đã có
-                const index = parseInt(selectedRow.dataset.index);
-                a417_all_records[index] = currentData;
-                a417_barcode_images[index] = canvas;
-                populateRecordsTable();
-                const newSelectedRow = recordsTableBody.querySelector(`[data-index='${index}']`);
-                if (newSelectedRow) newSelectedRow.classList.add('selected');
-                // alert("Đã cập nhật thành công bản ghi hiện tại!"); // Có thể bỏ alert này để đỡ phiền
+                if (selectedRow) {
+                    const index = parseInt(selectedRow.dataset.index);
+                    a417_all_records[index] = currentData;
+                    a417_barcode_images[index] = canvas;
+                    populateRecordsTable();
+                    const newSelectedRow = recordsTableBody.querySelector(`[data-index='${index}']`);
+                    if (newSelectedRow) newSelectedRow.classList.add('selected');
+                } else {
+                    a417_all_records.push(currentData);
+                    a417_barcode_images[a417_all_records.length - 1] = canvas;
+                    populateRecordsTable();
+                    const newIndex = a417_all_records.length - 1;
+                    const newRow = recordsTableBody.querySelector(`[data-index='${newIndex}']`);
+                    if (newRow) newRow.classList.add('selected');
+                }
             } else {
-                // Thêm bản ghi mới
-                a417_all_records.push(currentData);
-                a417_barcode_images[a417_all_records.length - 1] = canvas;
-                populateRecordsTable();
-                const newIndex = a417_all_records.length - 1;
-                const newRow = recordsTableBody.querySelector(`[data-index='${newIndex}']`);
-                if (newRow) newRow.classList.add('selected');
-                // alert("Đã tạo và thêm thành công bản ghi mới!"); // Có thể bỏ alert này
+                alert("Failed to generate barcode.");
             }
-        } else {
-            alert("Failed to generate barcode.");
+        } catch (e) {
+            alert("Error: " + e.message);
+            console.error(e);
         }
-    } catch (e) {
-        alert("Error: " + e.message);
     }
-}
     
     async function exportAllImages() {
         if (a417_all_records.length === 0) {
-            alert("No data to export. Please import from Excel first.");
+            alert("No data to export. Please import from Excel or generate data first.");
             return;
         }
         try {
@@ -2665,9 +2747,7 @@ const DC_calculate_DD = () => {
                 if(useFixedSize) {
                     finalCanvas.width = fixedW;
                     finalCanvas.height = fixedH;
-                    const x = (fixedW - barcodeCanvas.width) / 2;
-                    const y = (fixedH - barcodeCanvas.height) / 2;
-                    ctx.drawImage(barcodeCanvas, x, y);
+                    ctx.drawImage(barcodeCanvas, (fixedW - barcodeCanvas.width) / 2, (fixedH - barcodeCanvas.height) / 2);
                 } else {
                     finalCanvas.width = barcodeCanvas.width;
                     finalCanvas.height = barcodeCanvas.height;
@@ -2684,8 +2764,4 @@ const DC_calculate_DD = () => {
     }
     
     buildFormAndControls();
-    // Tôi cũng đã xóa lệnh gọi generateAllRandomData() ở đây để khi tải lại trang,
-    // nó không tự động tạo dữ liệu ngẫu nhiên, giúp bạn dễ dàng kiểm tra chức năng import hơn.
-    // Nếu bạn muốn nó tự tạo dữ liệu khi tải, hãy thêm lại dòng này:
-    // generateAllRandomData(); 
 }
