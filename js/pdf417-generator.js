@@ -1,5 +1,13 @@
 // js/pdf417-generator.js
+
+/**
+ * Khởi tạo toàn bộ chức năng của trình tạo mã vạch PDF417 AAMVA.
+ * Hàm này thiết lập giao diện người dùng, gắn các trình xử lý sự kiện,
+ * và quản lý toàn bộ luồng dữ liệu của ứng dụng.
+ * @param {function} exportCanvasesToDirectory - Một hàm được cung cấp từ bên ngoài để xử lý việc xuất nhiều canvas ra một thư mục.
+ */
 function initializePdf417Generator(exportCanvasesToDirectory) {
+    // --- Lấy các phần tử DOM quan trọng ---
     const accordionContainer = document.getElementById('a417-accordion-container');
     const controlsContainer = document.getElementById('a417-controls');
     const recordsTableBody = document.getElementById('a417-records-table-body');
@@ -7,32 +15,37 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
     const formattedDataText = document.getElementById('a417-formatted-data');
     const rawDataText = document.getElementById('a417-raw-data');
     
-    const a417_fields = {};
-    let a417_all_records = [];
-    let a417_barcode_images = {};
-        const STATE_IIN_MAP = {
+    // --- Biến trạng thái toàn cục của module ---
+    const a417_fields = {};       // Object để lưu trữ tham chiếu đến tất cả các ô input trên form.
+    let a417_all_records = [];    // Mảng lưu trữ tất cả các bản ghi dữ liệu (từ Excel hoặc được tạo ra).
+    let a417_barcode_images = {}; // Object lưu trữ các hình ảnh mã vạch đã được tạo ra, ánh xạ theo index.
+
+    // --- Dữ liệu hằng số ---
+    // Ánh xạ mã bang sang Số nhận dạng nhà phát hành (IIN) theo chuẩn AAMVA.
+    const STATE_IIN_MAP = {
         'AL': '636033', 'AK': '636059', 'AZ': '636026', 'AR': '636021', 
         'CA': '636014', 'CO': '636020', 'CT': '636006', 'DE': '636011',
-         'DC': '636043', 'FL': '636010', 'GA': '636055', 'HI': '636047', 
-         'ID': '636050', 'IL': '636035', 'IN': '636037', 'IA': '636018', 
-         'KS': '636022', 'KY': '636046', 'LA': '636007', 'ME': '636041', 
-         'MD': '636003', 'MA': '636002', 'MI': '636032', 'MN': '636038', 
-         'MS': '636051', 'MO': '636030', 'MT': '636008', 'NE': '636054', 
-         'NV': '636049', 'NH': '636039', 'NJ': '636036', 'NM': '636009', 
-         'NY': '636001', 'NC': '636004', 'ND': '636034', 'OH': '636023',
-          'OK': '636058', 'OR': '636029', 'PA': '636025', 'RI': '636052', 
-          'SC': '636005', 'SD': '636042', 'TN': '636053', 'TX': '636015', 'UT': '636040', 
+        'DC': '636043', 'FL': '636010', 'GA': '636055', 'HI': '636047', 
+        'ID': '636050', 'IL': '636035', 'IN': '636037', 'IA': '636018', 
+        'KS': '636022', 'KY': '636046', 'LA': '636007', 'ME': '636041', 
+        'MD': '636003', 'MA': '636002', 'MI': '636032', 'MN': '636038', 
+        'MS': '636051', 'MO': '636030', 'MT': '636008', 'NE': '636054', 
+        'NV': '636049', 'NH': '636039', 'NJ': '636036', 'NM': '636009', 
+        'NY': '636001', 'NC': '636004', 'ND': '636034', 'OH': '636023',
+        'OK': '636058', 'OR': '636029', 'PA': '636025', 'RI': '636052', 
+        'SC': '636005', 'SD': '636042', 'TN': '636053', 'TX': '636015', 'UT': '636040', 
         'VT': '636024', 'VA': '636000', 'WA': '636045', 'WV': '636061', 'WI': '636031', 'WY': '636060'
     };
 
+    // Cấu trúc dữ liệu định nghĩa tất cả các trường trên giao diện người dùng, chia theo danh mục.
     const fieldDefinitions = {
         "Header Information": { icon: "fa-solid fa-file-invoice", fields: [
             {label: "Issuer Identification Number (IIN):", name: "iin", value: "636000"},
             {label: "AAMVA Version Number:", name: "aamva_version", value: "10"},
             {label: "Jurisdiction Version Number:", name: "jurisdiction_version", value: "00"},
-            {label: "Number of Subfiles:", name: "subfile_count", value: "01"},
+            {label: "Number of Subfiles:", name: "subfile_count", value: "01", placeholder: "Auto-calculated"},
             {label: "DL Subfile Length:", name: "dl_subfile_length", value: "", placeholder: "Auto-calculated"},
-            {label: "Jurisdiction Subfile Length:", name: "jurisdiction_subfile_length", value: "0000"}
+            {label: "Jurisdiction Subfile Length:", name: "jurisdiction_subfile_length", value: "0000", placeholder: "Auto-calculated"}
         ]},
         "Identification Information": { icon: "fa-solid fa-user", fields: [
             {label: "Family Name (DCS):", name: "family_name", calculable: true}, 
@@ -83,13 +96,17 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             {label: "Organ Donor Indicator (DDK):", name: "organ_donor", type: 'combobox', options: ["0", "1"],value: "0"},
             {label: "Veteran Indicator (DDL):", name: "veteran", type: 'combobox', options: ["0", "1"]}
         ]},
-             "Jurisdiction-Specific Fields": { icon: "fa-solid fa-flag-usa", fields: [
+        "Jurisdiction-Specific Fields": { icon: "fa-solid fa-flag-usa", fields: [
             {label: "Place of Birth (DCI):", name: "place_of_birth"},
-            // Đã có sẵn, chỉ cần đảm bảo calculable: true
             {label: "Audit Information (DCJ):", name: "audit_info", calculable: true}, 
-            // Thêm trường mới, không có mã AAMVA nên để trống
             {label: "Issuing Office (IOE):", name: "issuing_office", calculable: true}, 
-            {label: "Inventory Control (DCK):", name: "inventory_control", calculable: true}
+            {label: "Inventory Control (DCK):", name: "inventory_control", calculable: true},
+            {label: "Jurisdiction Eye Color (ZCA):", name: "zca_eye_color"},
+            {label: "Jurisdiction Hair Color (ZCB):", name: "zcb_hair_color"},
+            {label: "Jurisdiction Field C (ZCC):", name: "zcc_field"},
+            {label: "Jurisdiction Field D (ZCD):", name: "zcd_field"},
+            {label: "Jurisdiction Field E (ZCE):", name: "zce_field"},
+            {label: "Jurisdiction Field F (ZCF):", name: "zcf_field"}
         ]},
         "Optional Fields": { icon: "fa-solid fa-plus-square", fields: [
             {label: "Alias Family Name (DBN):", name: "alias_family"},
@@ -98,13 +115,18 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         ]}
     };
 
+    /**
+     * Xây dựng giao diện người dùng (form, control) từ fieldDefinitions.
+     */
     function buildFormAndControls() {
-            function updateIinBasedOnState() {
-        const selectedState = a417_fields.state.value.toUpperCase();
-        const iin = STATE_IIN_MAP[selectedState] || '636000'; // Fallback to a generic IIN
-        a417_fields.iin.value = iin;
-    }
+        // Hàm nội bộ để cập nhật IIN dựa trên bang được chọn.
+        function updateIinBasedOnState() {
+            const selectedState = a417_fields.state.value.toUpperCase();
+            const iin = STATE_IIN_MAP[selectedState] || '636000'; // Mặc định nếu không tìm thấy
+            a417_fields.iin.value = iin;
+        }
 
+        // Tạo HTML cho các accordion và các trường input.
         let accordionHtml = '';
         for (const category in fieldDefinitions) {
             const categoryInfo = fieldDefinitions[category];
@@ -148,7 +170,9 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             accordionHtml += `</div></div></div>`;
         }
         accordionContainer.innerHTML = accordionHtml;
-         for (const category in fieldDefinitions) {
+
+        // Lưu trữ tham chiếu đến tất cả các phần tử input vào object a417_fields.
+        for (const category in fieldDefinitions) {
              fieldDefinitions[category].fields.forEach(field => {
                 const element = document.getElementById(`a417-${field.name}`);
                 if (element) {
@@ -158,9 +182,9 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
                 }
              });
         }
-        // ==
-
-        const states = ["AK", "AL", "AR", "AZ", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA", "MD", "ME", "MI", "MN", "MO", "MS", "MT", "NC", "ND", "NE", "NH", "NJ", "NM", "NV", "NY", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VA", "VT", "WA", "WI", "WV", "WY"];
+        
+        // Tạo các nút điều khiển chính.
+        const states = Object.keys(STATE_IIN_MAP).sort();
         let stateOptions = states.map(s => `<option value="${s}"></option>`).join('');
         
         controlsContainer.innerHTML = `
@@ -174,29 +198,30 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             <input type="file" id="a417-excel-input" accept=".xlsx, .xls">
             <button id="a417-generate-current-btn"><i class="fa-solid fa-gears"></i> Generate Barcode</button>
         `;
+
+        // Gắn các trình xử lý sự kiện.
         addAccordionListeners();
         addFieldCalculatorListeners();
+        addTabListeners();
         
         document.getElementById('a417-fill-all-btn').addEventListener('click', generateAllRandomData);
         document.getElementById('a417-excel-input').addEventListener('change', importFromExcel);
         document.getElementById('a417-generate-current-btn').addEventListener('click', generateBarcodeForCurrentData);
         document.getElementById('a417-export-all-btn').addEventListener('click', exportAllImages);
         
-        addTabListeners();
-                // --- ADDED FOR IIN AUTO-UPDATE ---
         const stateSelector = document.getElementById('a417-state-selector-for-random');
         stateSelector.addEventListener('change', () => {
-            // Update the main state field when the selector changes, then update IIN
             a417_fields.state.value = stateSelector.value;
             updateIinBasedOnState();
         });
         if (a417_fields.state) {
             a417_fields.state.addEventListener('change', updateIinBasedOnState);
         }
-        // --- END OF ADDED CODE ---
-
     }
 
+    /**
+     * Gắn sự kiện đóng/mở cho các accordion.
+     */
     function addAccordionListeners() {
         const headers = document.querySelectorAll('.accordion-header');
         headers.forEach((header, index) => {
@@ -211,13 +236,16 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
                     content.classList.add('active');
                 }
             });
+            // Mặc định mở 2 accordion đầu tiên.
             if(index < 2) {
                 header.click();
             }
         });
-        // SỬA LỖI 1: Xóa văn bản tiếng Việt và dấu ngoặc nhọn bị thừa ở đây
     }
 
+    /**
+     * Gắn sự kiện chuyển tab cho khu vực output.
+     */
     function addTabListeners() {
         const tabLinks = document.querySelectorAll('.output-tabs .tab-link');
         tabLinks.forEach(link => {
@@ -231,6 +259,9 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         });
     }
     
+    /**
+     * Gắn sự kiện cho các nút "tính toán" bên cạnh mỗi trường.
+     */
     function addFieldCalculatorListeners() {
         accordionContainer.addEventListener('click', (event) => {
             const button = event.target.closest('.field-calculator-btn');
@@ -239,6 +270,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             const fieldName = button.dataset.fieldName;
             const state = document.getElementById('a417-state-selector-for-random').value.toUpperCase();
 
+            // Ưu tiên hàm tạo riêng của bang, nếu không có thì dùng hàm chung.
             const generator = (fieldGenerators.specific[state] && fieldGenerators.specific[state][fieldName]) 
                               || fieldGenerators.generic[fieldName];
             
@@ -250,10 +282,18 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         });
     }
     
-    // --- UTILITY FUNCTIONS ---
-        function get_letter_corresponding_month(month) {
+    // =======================================================================
+    // === SECTION: UTILITY FUNCTIONS (Hàm tiện ích)                       ===
+    // =======================================================================
+    
+    function get_letter_corresponding_month(month) {
         const letters = "ABCDEFGHIJKL";
-        return letters[parseInt(month) - 1];
+        const monthStr = String(month);
+        const monthInt = parseInt(monthStr, 10);
+        if (isNaN(monthInt) || monthInt < 1 || monthInt > 12) {
+            return ''; 
+        }
+        return letters[monthInt - 1];
     }
     function showInputDataAlert(message) {
         console.warn("Input Data Alert:", message);
@@ -266,6 +306,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         const day = parseInt(date.slice(2, 4));
         const month = parseInt(date.slice(0, 2));
         const year = parseInt(date.slice(-4));
+        if (isNaN(day) || isNaN(month) || isNaN(year)) return "000";
         let total_days = day;
         const daysArray = (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) ? mdays_leap : mdays;
         for (let i = 1; i < month; i++) {
@@ -298,11 +339,6 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         return alphabet[Math.floor(Math.random() * alphabet.length)];
     }
-    function getRandomStringOfChars(len, chars) {
-        let s = "";
-        for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * chars.length)];
-        return s;
-    }
     function getRandomLastName() {
         const lastnames = ["Smith","Johnson","Williams","Brown","Jones","Garcia","Miller","Davis","Rodriguez","Martinez","Hernandez","Lopez","Gonzalez","Wilson","Anderson","Thomas","Taylor","Moore","Jackson"];
         return lastnames[Math.floor(Math.random() * lastnames.length)];
@@ -312,17 +348,20 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         const f_names = ["Mary","Patricia","Jennifer","Linda","Elizabeth","Barbara","Susan","Jessica","Sarah","Karen"];
         return (sex == "2") ? (f_names[Math.floor(Math.random() * f_names.length)]) : (m_names[Math.floor(Math.random() * m_names.length)]);
     }
-    function getRandomMiddleName() { return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random()*26)]; }
     function getRandomInt(min, max) {
         min = Math.ceil(min);
         max = Math.floor(max);
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
-    // --- START: STATE-SPECIFIC GENERATORS (All functions are defined here) ---
+
+    // =======================================================================
+    // === SECTION: STATE-SPECIFIC & GENERIC GENERATORS                    ===
+    // =======================================================================
+    
+    // --- Generic Generators (Dùng khi không có hàm riêng cho bang) ---
     const generic_calculate_documentNumber = () => { a417_fields.customer_id.value =getRandomNumericString(8); };
     const generic_calculate_ICN = () => { a417_fields.inventory_control.value = getRandomNumericString(12); };
     const generic_calculate_DD = () => { a417_fields.document_discriminator.value = getRandomLetterAndDigit() + getRandomLetterAndDigit() + getRandomNumericString(10); };
-    
     const randomize_family_name = () => { a417_fields.family_name.value = getRandomLastName(); };
     const randomize_first_name = () => { a417_fields.first_name.value = getRandomFirstName(a417_fields.sex.value); };
     const randomize_dob = () => { a417_fields.dob.value = getFormattedDate_MMDDYYYY(getRandomDateByYear(1960, 2002)); };
@@ -330,10 +369,10 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         const today = new Date();
         a417_fields.issue_date.value = getFormattedDate_MMDDYYYY(getRandomDateByYear(2020, today.getFullYear())); 
     };
-        const randomize_expiry_date = () => {
+    const randomize_expiry_date = () => {
         const issueDateStr = a417_fields.issue_date.value;
         if (!issueDateStr || issueDateStr.length !== 8) {
-            randomize_issue_date();
+            randomize_issue_date(); // Phải có ngày cấp trước
         }
         const updatedIssueDateStr = a417_fields.issue_date.value;
         const month = parseInt(updatedIssueDateStr.substring(0, 2)) - 1;
@@ -342,1247 +381,368 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         const issueDate = new Date(year, month, day);
 
         const state = document.getElementById('a417-state-selector-for-random').value.toUpperCase();
-        const expiryYears = (state === 'AZ') ? 12 : 8;
+        const expiryYears = (state === 'AZ') ? 12 : 8; // Arizona có thời hạn 12 năm
         const expiryDate = new Date(issueDate.getFullYear() + expiryYears, issueDate.getMonth(), issueDate.getDate());
         a417_fields.expiry_date.value = getFormattedDate_MMDDYYYY(expiryDate);
     };
 
-/*
- $$$$  $$      $$$$  $$$$$   $$$$  $$   $  $$$$ 
-$$  $$ $$     $$  $$ $$  $$ $$  $$ $$$ $$ $$  $$
-$$$$$$ $$     $$$$$$ $$$$$  $$$$$$ $$ $ $ $$$$$$
-$$  $$ $$     $$  $$ $$  $$ $$  $$ $$   $ $$  $$
-$$  $$ $$$$$$ $$  $$ $$$$$  $$  $$ $$   $ $$  $$
-*/
-
-// ============== ALABAMA (AL) ============== //    
-    const AL_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomNumericString(8);
-    };
+    // --- State-Specific Generators ---
+    const AL_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomNumericString(8); };
     const AL_calculate_ICN = () => {
-        const docNum = a417_fields.customer_id.value;
-        const issueDate = a417_fields.issue_date.value;
-        if (!docNum || docNum.length !== 8) {
-            showInputDataAlert("AL ICN Error: A valid 8-char Document Number is required!");
-            return;
-        }
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("AL ICN Error: Incorrect issue date!");
-            return;
-        }
-        const days = ("00" + (parseInt(getNumberOfDaysFromBeginnigOfYear(issueDate)) + 4)).slice(-3);
-        a417_fields.inventory_control.value = `${docNum}${getRandomNumericString(5)}${issueDate.slice(-2)}${days}01`;
+        const { customer_id, issue_date } = a417_fields;
+        if (!customer_id.value || customer_id.value.length !== 8 || !issue_date.value || issue_date.value.length !== 8) { showInputDataAlert("AL ICN Error: A valid 8-char Doc Num and Issue Date are required."); return; }
+        const days = ("00" + (parseInt(getNumberOfDaysFromBeginnigOfYear(issue_date.value)) + 4)).slice(-3);
+        a417_fields.inventory_control.value = `${customer_id.value}${getRandomNumericString(5)}${issue_date.value.slice(-2)}${days}01`;
     };
-    // --- NEW FUNCTION FOR ALABAMA'S EXPIRY DATE ---
     const AL_calculate_expiry_date = () => {
         const issueDateStr = a417_fields.issue_date.value;
-        if (!issueDateStr || issueDateStr.length !== 8) {
-            showInputDataAlert("AL Expiry Date Error: A valid Issue Date is required first.");
-            return;
-        }
+        if (!issueDateStr || issueDateStr.length !== 8) { showInputDataAlert("AL Expiry Date Error: A valid Issue Date is required."); return; }
         const month = issueDateStr.slice(0, 2);
-        // Ensure day is at least '01' after subtracting
         let day = parseInt(issueDateStr.slice(2, 4)) - 1;
         if (day < 1) day = 1; 
         const year = (parseInt(issueDateStr.slice(-4)) + 4).toString();
         a417_fields.expiry_date.value = month + day.toString().padStart(2, '0') + year;
     };
     
-   /* const AL_calculate_ICN = () => {
-        const docNum = a417_fields.customer_id.value;
+    const AK_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomNumericString(7); };
+    const AK_calculate_ICN = () => { a417_fields.inventory_control.value = "1000" + getRandomNumericString(6); };
+    const AK_calculate_DD = () => {
         const issueDate = a417_fields.issue_date.value;
-        if (!docNum || docNum.length !== 8) {
-            showInputDataAlert("AL ICN Error: A valid 8-char Document Number is required!");
-            return;
-        }
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("AL ICN Error: Incorrect issue date!");
-            return;
-        }
-        const days = ("00" + (parseInt(getNumberOfDaysFromBeginnigOfYear(issueDate)) + 4)).slice(-3);
-        a417_fields.inventory_control.value = `${docNum}${getRandomNumericString(5)}${issueDate.slice(-2)}${days}01`;
-    };*/
-
-   /*
- $$$$  $$      $$$$   $$$$  $$  $$  $$$$
-$$  $$ $$     $$  $$ $$     $$ $$  $$  $$
-$$$$$$ $$     $$$$$$  $$$$  $$$$   $$$$$$
-$$  $$ $$     $$  $$     $$ $$ $$  $$  $$
-$$  $$ $$$$$$ $$  $$  $$$$  $$  $$ $$  $$
-*/
-   const AK_calculate_documentNumber = () => {
-    a417_fields.customer_id.value = getRandomNumericString(7);
-        };
-
-        const AK_calculate_ICN = () => {
-            a417_fields.inventory_control.value = "1000" + getRandomNumericString(6);
-        };
-
-        const AK_calculate_DD = () => {
-            const issueDate = a417_fields.issue_date.value;
-            if (!issueDate || issueDate.length !== 8) {
-                showInputDataAlert("DD calculation error. Incorrect issue date!");
-                return;
-            }
-
-            const randLetter = () => String.fromCharCode(65 + Math.floor(Math.random() * 26));
-            const ending = Math.random() < 0.5 ? "-0" : "-1";
-
-            const dd = "8" + getRandomNumericString(6) + " " +
-                getRandomNumericString(3) +
-                issueDate.slice(-2) + issueDate.slice(0, 2) + issueDate.slice(2, 4) +
-                randLetter() + randLetter() + randLetter() +
-                ending;
-
-            a417_fields.document_discriminator.value = dd;
-        };
-
-
-/*
- $$$$  $$$$$  $$$$$$ $$$$$$  $$$$  $$  $$  $$$$
-$$  $$ $$  $$   $$      $$  $$  $$ $$$ $$ $$  $$
-$$$$$$ $$$$$    $$     $$   $$  $$ $$ $$$ $$$$$$
-$$  $$ $$  $$   $$    $$    $$  $$ $$  $$ $$  $$
-$$  $$ $$  $$ $$$$$$ $$$$$$  $$$$  $$  $$ $$  $$
-*/
-
-// =============== ARIZONA (AZ) ============== //   
- const AZ_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = "D" + getRandomNumericString(8);
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("DD calculation error for AK. Incorrect issue date!"); return; }
+        const randLetter = () => String.fromCharCode(65 + Math.floor(Math.random() * 26));
+        const ending = Math.random() < 0.5 ? "-0" : "-1";
+        const dd = "8" + getRandomNumericString(6) + " " + getRandomNumericString(3) + issueDate.slice(-2) + issueDate.slice(0, 2) + issueDate.slice(2, 4) + randLetter() + randLetter() + randLetter() + ending;
+        a417_fields.document_discriminator.value = dd;
     };
-    const AZ_calculate_ICN = () => {
-        a417_fields.inventory_control.value = "48" + getRandomNumericString(9);
-    };
+
+    const AZ_calculate_documentNumber = () => { a417_fields.customer_id.value = "D" + getRandomNumericString(8); };
+    const AZ_calculate_ICN = () => { a417_fields.inventory_control.value = "48" + getRandomNumericString(9); };
     const AZ_calculate_DD = () => {
-        const birthDate = a417_fields.dob.value;
-        const firstName = a417_fields.first_name.value;
-        const lastName = a417_fields.family_name.value;
-
-        if (!birthDate || birthDate.length !== 8) {
-            showInputDataAlert("AZ DD calculation error. Incorrect birth date!");
-            return;
-        }
-        if (!firstName) {
-            showInputDataAlert("AZ DD calculation error. Incorrect First name!");
-            return;
-        }
-        if (!lastName) {
-            showInputDataAlert("AZ DD calculation error. Incorrect Last name!");
-            return;
-        }
-
-        a417_fields.document_discriminator.value =
-            getRandomNumericString(4) +
-            getRandomLetter() + getRandomLetter() +
-            getRandomNumericString(3) +
-            lastName.charAt(0).toUpperCase() +
-            getRandomNumericString(4) +
-            firstName.charAt(0).toUpperCase() +
-            birthDate.slice(-1);
+        const { dob, first_name, family_name } = a417_fields;
+        if (!dob.value || dob.value.length !== 8 || !first_name.value || !family_name.value) { showInputDataAlert("AZ DD calculation error. DOB, First Name, and Last Name are required."); return; }
+        a417_fields.document_discriminator.value = getRandomNumericString(4) + getRandomLetter() + getRandomLetter() + getRandomNumericString(3) + family_name.value.charAt(0).toUpperCase() + getRandomNumericString(4) + first_name.value.charAt(0).toUpperCase() + dob.value.slice(-1);
     };
 
- /*
- $$$$  $$$$$  $$  $$  $$$$  $$  $$  $$$$   $$$$   $$$$
-$$  $$ $$  $$ $$ $$  $$  $$ $$$ $$ $$     $$  $$ $$
-$$$$$$ $$$$$  $$$$   $$$$$$ $$ $$$  $$$$  $$$$$$  $$$$
-$$  $$ $$  $$ $$ $$  $$  $$ $$  $$     $$ $$  $$     $$
-$$  $$ $$  $$ $$  $$ $$  $$ $$  $$  $$$$  $$  $$  $$$$
-*/
-    const AR_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = "9" + getRandomNumericString(8);
-    };
-    const AR_calculate_ICN = () => {
-        a417_fields.inventory_control.value = "021011" + getRandomNumericString(10);
-    };
-    const AR_calculate_DD = () => {
-        a417_fields.document_discriminator.value = getRandomNumericString(9) + " " + getRandomNumericString(4);
-    };
+    const AR_calculate_documentNumber = () => { a417_fields.customer_id.value = "9" + getRandomNumericString(8); };
+    const AR_calculate_ICN = () => { a417_fields.inventory_control.value = "021011" + getRandomNumericString(10); };
+    const AR_calculate_DD = () => { a417_fields.document_discriminator.value = getRandomNumericString(9) + " " + getRandomNumericString(4); };
     
- /*
- $$$$   $$$$  $$     $$$$$$ $$$$$$  $$$$  $$$$$  $$  $$ $$$$$$  $$$$ 
-$$  $$ $$  $$ $$       $$   $$     $$  $$ $$  $$ $$$ $$   $$   $$  $$
-$$     $$$$$$ $$       $$   $$$$   $$  $$ $$$$$  $$ $$$   $$   $$$$$$
-$$  $$ $$  $$ $$       $$   $$     $$  $$ $$  $$ $$  $$   $$   $$  $$
- $$$$  $$  $$ $$$$$$ $$$$$$ $$      $$$$  $$  $$ $$  $$ $$$$$$ $$  $$
-*/
-    const CA_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomLetter() + getRandomNumericString(7);
-    };
+    const CA_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomLetter() + getRandomNumericString(7); };
     const CA_calculate_ICN = () => {
-        const docNum = a417_fields.customer_id.value;
-        const issueDate = a417_fields.issue_date.value;
-        if (!docNum || docNum.length !== 8) {
-            showInputDataAlert("CA ICN Error: Incorrect document number (must be 8 chars).");
-            return;
-        }
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("CA ICN Error: Incorrect issue date.");
-            return;
-        }
-        a417_fields.inventory_control.value = issueDate.slice(-2) + getNumberOfDaysFromBeginnigOfYear(issueDate) + docNum + "0401";
+        const { customer_id, issue_date } = a417_fields;
+        if (!customer_id.value || customer_id.value.length !== 8 || !issue_date.value || issue_date.value.length !== 8) { showInputDataAlert("CA ICN Error: Incorrect doc number (8 chars) or issue date."); return; }
+        a417_fields.inventory_control.value = issue_date.value.slice(-2) + getNumberOfDaysFromBeginnigOfYear(issue_date.value) + customer_id.value + "0401";
     };
     const CA_calculate_DD = () => {
-        const issueDate = a417_fields.issue_date.value;
-        const expiryDate = a417_fields.expiry_date.value;
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("CA DD Error: Incorrect issue date!");
-            return;
-        }
-        if (!expiryDate || expiryDate.length !== 8) {
-            showInputDataAlert("CA DD Error: Incorrect expiry date!");
-            return;
-        }
-        const suff_alphabet = ["AA", "BB", "DD"];
-        const suffix = suff_alphabet[Math.floor(Math.random() * suff_alphabet.length)];
-        const fullIssueDate = `${issueDate.slice(0, 2)}/${issueDate.slice(2, 4)}/${issueDate.slice(-4)}`;
-        a417_fields.document_discriminator.value = `${fullIssueDate}${getRandomNumericString(5)}/${suffix}FD/${expiryDate.slice(-2)}`;
+        const { issue_date, expiry_date } = a417_fields;
+        if (!issue_date.value || issue_date.value.length !== 8 || !expiry_date.value || expiry_date.value.length !== 8) { showInputDataAlert("CA DD Error: Incorrect issue or expiry date."); return; }
+        const suffix = ["AA", "BB", "DD"][Math.floor(Math.random() * 3)];
+        const fullIssueDate = `${issue_date.value.slice(0, 2)}/${issue_date.value.slice(2, 4)}/${issue_date.value.slice(-4)}`;
+        a417_fields.document_discriminator.value = `${fullIssueDate}${getRandomNumericString(5)}/${suffix}FD/${expiry_date.value.slice(-2)}`;
     };
 
-  /*
- $$$$   $$$$  $$      $$$$  $$$$$   $$$$  $$$$$   $$$$
-$$  $$ $$  $$ $$     $$  $$ $$  $$ $$  $$ $$  $$ $$  $$
-$$     $$  $$ $$     $$  $$ $$$$$  $$$$$$ $$  $$ $$  $$
-$$  $$ $$  $$ $$     $$  $$ $$  $$ $$  $$ $$  $$ $$  $$
- $$$$   $$$$  $$$$$$  $$$$  $$  $$ $$  $$ $$$$$   $$$$
-*/
-
-
-// ================== COLORADO (CO) ================= //
-    const CO_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomNumericString(9);
+    const CO_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomNumericString(9); };
+    const CO_calculate_DD = () => { a417_fields.document_discriminator.value = getRandomNumericString(7); };
+    const CO_calculate_audit_info = () => {
+        const issueDateStr = a417_fields.issue_date.value;
+        if (!issueDateStr || issueDateStr.length !== 8) { showInputDataAlert("CO Audit Info calculation error: Incorrect issue date."); return; }
+        const issueDate = new Date(parseInt(issueDateStr.slice(4, 8)), parseInt(issueDateStr.slice(0, 2)) - 1, parseInt(issueDateStr.slice(2, 4)));
+        issueDate.setDate(issueDate.getDate() + 1);
+        const formattedDate = (issueDate.getMonth() + 1).toString().padStart(2, '0') + issueDate.getDate().toString().padStart(2, '0') + issueDate.getFullYear().toString().slice(-2);
+        a417_fields.audit_info.value = `CODL_0_${formattedDate}_${getRandomNumericString(5)}`;
     };
-    const CO_calculate_DD = () => {
-        a417_fields.document_discriminator.value = getRandomNumericString(7);
 
-    };
-   // === HÀM MỚI DÀNH CHO COLORADO ===
-
-const CO_calculate_audit_info = () => {
-    const issueDateStr = a417_fields.issue_date.value;
-    if (!issueDateStr || issueDateStr.length !== 8) {
-        // Cập nhật thông báo lỗi cho rõ ràng hơn
-        showInputDataAlert("CO Audit Info calculation error: An incorrect issue date is provided!");
-        return;
-    }
-
-    // Logic tính toán ngày tháng giữ nguyên
-    const issueDate = new Date(
-        parseInt(issueDateStr.slice(4, 8)),
-        parseInt(issueDateStr.slice(0, 2)) - 1,
-        parseInt(issueDateStr.slice(2, 4))
-    );
-    issueDate.setDate(issueDate.getDate() + 1);
-
-    const month = (issueDate.getMonth() + 1).toString().padStart(2, '0');
-    const day = issueDate.getDate().toString().padStart(2, '0');
-    const year = issueDate.getFullYear().toString().slice(-2); // Lấy 2 số cuối của năm
-
-    const formattedDate = `${month}${day}${year}`; // Định dạng MMDDYY
-
-    // === THAY ĐỔI QUAN TRỌNG: GÁN KẾT QUẢ VÀO Ô "AUDIT INFO" ===
-    a417_fields.audit_info.value = `CODL_0_${formattedDate}_${getRandomNumericString(5)}`;
-};
-    /*function CO_calculate_AUDIT() {
-    var issueDate = document.getElementById("inputIssueDate").value;
-    if (issueDate.length != 8) {
-        showInputDataAlert("Audit information calculation error. Incorrect issue date!")
-        return;
-    }
-
-    var issueDateDATE = new Date(parseInt(issueDate.slice(-4)), parseInt(issueDate.slice(0, 2)) - 1, parseInt(issueDate.slice(2, 4)));
-    issueDateDATE.setDate(issueDateDATE.getDate() + 1)
-
-    // Get year, month, and day part from the date
-    var year = issueDateDATE.toLocaleString("default", { year: "2-digit" });
-    var month = issueDateDATE.toLocaleString("default", { month: "2-digit" });
-    var day = issueDateDATE.toLocaleString("default", { day: "2-digit" });
-
-    // Generate yyyy-mm-dd date string
-    var formattedDate = month + day + year;
-
-    document.getElementById("inputAudit").value = "CODL_0_" + formattedDate + "_" + getRandomNumericString(5);
-}*/
-
- /*
- $$$$   $$$$  $$  $$ $$  $$ $$$$$  $$$$  $$$$$$ $$$$$$  $$$$  $$  $$ $$$$$$
-$$  $$ $$  $$ $$$ $$ $$$ $$ $$    $$  $$   $$     $$   $$  $$ $$  $$   $$
-$$     $$  $$ $$ $$$ $$ $$$ $$$$  $$       $$     $$   $$     $$  $$   $$
-$$  $$ $$  $$ $$  $$ $$  $$ $$    $$  $$   $$     $$   $$  $$ $$  $$   $$
- $$$$   $$$$  $$  $$ $$  $$ $$$$$  $$$$    $$   $$$$$$  $$$$   $$$$    $$
-*/
-       // CONNECTICUT (CT) - UPDATED
     const CT_calculate_documentNumber = () => {
         const dob = a417_fields.dob.value;
-        if (!dob || dob.length !== 8) {
-            showInputDataAlert("CT Doc Number Error: Incorrect birth date!");
-            return;
-        }
+        if (!dob || dob.length !== 8) { showInputDataAlert("CT Doc Number Error: Incorrect birth date!"); return; }
         const year = parseInt(dob.slice(-4));
-        // This logic calculates the special month number based on the birth year
         const monthNumber = (year % 2) ? dob.slice(0, 2) : (parseInt(dob.slice(0, 2)) + 12).toString();
         a417_fields.customer_id.value = monthNumber + getRandomNumericString(7);
     };
     const CT_calculate_ICN = () => {
         const docNum = a417_fields.customer_id.value;
-        if (!docNum || docNum.length !== 9) {
-            showInputDataAlert("CT ICN Error: Incorrect document number (must be 9 digits).");
-            return;
-        }
+        if (!docNum || docNum.length !== 9) { showInputDataAlert("CT ICN Error: Incorrect doc num (9 digits)."); return; }
         a417_fields.inventory_control.value = docNum + "CT" + getRandomDigit() + getRandomLetter() + getRandomLetter() + getRandomLetter() + "01";
     };
     const CT_calculate_DD = () => {
         const issueDate = a417_fields.issue_date.value;
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("CT DD Error: Incorrect issue date!");
-            return;
-        }
-        const formattedDate = issueDate.slice(-2) + issueDate.slice(0, 2) + issueDate.slice(2, 4); // YYMMDD
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("CT DD Error: Incorrect issue date!"); return; }
+        const formattedDate = issueDate.slice(-2) + issueDate.slice(0, 2) + issueDate.slice(2, 4);
         a417_fields.document_discriminator.value = `${formattedDate}${getRandomNumericString(6)}01MV${getRandomLetter()}${getRandomDigit()}`;
     };
 
-
-    /*
-$$$$$  $$$$$ $$      $$$$  $$   $  $$$$  $$$$$  $$$$$
-$$  $$ $$    $$     $$  $$ $$   $ $$  $$ $$  $$ $$
-$$  $$ $$$$  $$     $$$$$$ $$ $ $ $$$$$$ $$$$$  $$$$
-$$  $$ $$    $$     $$  $$ $$$$$$ $$  $$ $$  $$ $$
-$$$$$  $$$$$ $$$$$$ $$  $$  $$ $$ $$  $$ $$  $$ $$$$$
-*/
-    // DELAWARE (DE) - UPDATED
-    const DE_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomNumericString(7);
-    };
-    const DE_calculate_ICN = () => {
-        a417_fields.inventory_control.value = "0110" + getRandomNumericString(12);
-    };
+    const DE_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomNumericString(7); };
+    const DE_calculate_ICN = () => { a417_fields.inventory_control.value = "0110" + getRandomNumericString(12); };
     const DE_calculate_DD = () => {
         const issueDate = a417_fields.issue_date.value;
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("DE DD Error: Incorrect issue date!");
-            return;
-        }
-        const formattedDate = issueDate.slice(-4) + issueDate.slice(0, 2) + issueDate.slice(2, 4); // YYYYMMDD
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("DE DD Error: Incorrect issue date!"); return; }
+        const formattedDate = issueDate.slice(-4) + issueDate.slice(0, 2) + issueDate.slice(2, 4);
         a417_fields.document_discriminator.value = `L${formattedDate}${getRandomNumericString(6)}C`;
     };
-
     
-    /*
-$$$$$$ $$      $$$$  $$$$$  $$$$$$ $$$$$   $$$$ 
-$$     $$     $$  $$ $$  $$   $$   $$  $$ $$  $$
-$$$$   $$     $$  $$ $$$$$    $$   $$  $$ $$$$$$
-$$     $$     $$  $$ $$  $$   $$   $$  $$ $$  $$
-$$     $$$$$$  $$$$  $$  $$ $$$$$$ $$$$$  $$  $$
-*/
+    const FL_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomLetter() + getRandomNumericString(12); };
+    const FL_calculate_ICN = () => { a417_fields.inventory_control.value = "0100" + getRandomNumericString(12); };
+    const FL_calculate_DD = () => { a417_fields.document_discriminator.value = getRandomLetter() + getRandomNumericString(12); };
 
-// =============== FLORIDA (FL) ============== //
-
-     // FLORIDA (FL) - UPDATED
-    const FL_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomLetter() + getRandomNumericString(12);
-    };
-    const FL_calculate_ICN = () => {
-        a417_fields.inventory_control.value = "0100" + getRandomNumericString(12);
-    };
-    const FL_calculate_DD = () => {
-        // This function now generates a random value of 1 letter + 12 digits for the DD field.
-        a417_fields.document_discriminator.value = getRandomLetter() + getRandomNumericString(12);
-    };
-
-/*
-_$$$$_ $$$$$ _$$$$_ $$$$$_ _$$$$_ $$$$$$ _$$$$_     _$$$$_ _$$$$_ __$$ _$$$$_
-$$____ $$___ $$__$$ $$__$$ $$____ __$$__ $$__$$     $$__$$ $$__$$ $$$$ $$__$$
-$$_$$$ $$$$_ $$__$$ $$$$$_ $$_$$$ __$$__ $$$$$$     ___$$_ $$__$$ __$$ _$$$$$
-$$__$$ $$___ $$__$$ $$__$$ $$__$$ __$$__ $$__$$     _$$___ $$__$$ __$$ ____$$
-_$$$$_ $$$$$ _$$$$_ $$__$$ _$$$$_ $$$$$$ $$__$$     $$$$$$ _$$$$_ __$$ _$$$$_
-*/
-
-
-// ============================= GEORGIA (GA) ============================ //
     const GA_calculate_documentNumber = () => { a417_fields.customer_id.value = "0" + getRandomNumericString(8); };
-    
-    // Cập nhật hàm ICN với logic mới của bạn
-    const GA_calculate_ICN = () => { 
-        a417_fields.inventory_control.value = "1000" + getRandomNumericString(7);
-    };
-    
-    // Cập nhật hàm DD để khớp với độ dài ICN mới (11 ký tự)
+    const GA_calculate_ICN = () => { a417_fields.inventory_control.value = "1000" + getRandomNumericString(7); };
     const GA_calculate_DD = () => {
         const icn = a417_fields.inventory_control.value;
-        if (!icn || icn.length !== 11) {
-            showInputDataAlert("GA DD calculation error: A valid 11-char ICN is required. Please generate ICN first.");
-            return;
-        }
+        if (!icn || icn.length !== 11) { showInputDataAlert("GA DD calculation error: A valid 11-char ICN is required."); return; }
         a417_fields.document_discriminator.value = icn;
     };
-/*
-$$  $$  $$$$  $$   $  $$$$  $$$$$$ $$$$$$
-$$  $$ $$  $$ $$   $ $$  $$   $$     $$
-$$$$$$ $$$$$$ $$ $ $ $$$$$$   $$     $$
-$$  $$ $$  $$ $$$$$$ $$  $$   $$     $$
-$$  $$ $$  $$  $$ $$ $$  $$ $$$$$$ $$$$$$
-*/  const HI_calculate_documentNumber = () => { a417_fields.customer_id.value = "H00" + getRandomNumericString(6); };
-// === HÀM MỚI DÀNH CHO HAWAII ===
 
-const HI_calculate_audit_info = () => {
-    const issueDate = a417_fields.issue_date.value;
-    if (!issueDate || issueDate.length !== 8) { 
-        // Cập nhật thông báo lỗi cho rõ ràng
-        showInputDataAlert("HI Audit Info Error: Incorrect issue date."); 
-        return; 
-    }
-    
-    // Logic tính toán ngày tháng giữ nguyên
-    const d = new Date(issueDate.slice(-4), parseInt(issueDate.slice(0,2)) - 1, parseInt(issueDate.slice(2,4)));
-    d.setDate(d.getDate() + 6);
-    const formattedDate = ("0" + (d.getMonth() + 1)).slice(-2) + ("0" + d.getDate()).slice(-2) + d.getFullYear();
-    
-    // === THAY ĐỔI QUAN TRỌNG: GÁN KẾT QUẢ VÀO Ô "AUDIT INFO" ===
-    a417_fields.audit_info.value = issueDate.slice(-4) + formattedDate.slice(0,4) + "_106336_2_1" + getRandomNumericString(2);
-};
-
-const HI_calculate_DD = () => {
-    const issueDate = a417_fields.issue_date.value;
-    if (!issueDate || issueDate.length !== 8) {
-        showInputDataAlert("HI DD calculation error: Incorrect issue date!");
-        return;
-    }
-
-    let randomPart = getRandomNumericString(6);
-    for (let i = 0; i < 6; i++) { 
-        randomPart += getRandomLetterAndDigit(); 
-    }
-    
-    const formattedDate = issueDate.slice(-4) + issueDate.slice(0,2) + issueDate.slice(2,4); // YYYYMMDD
-    
-    a417_fields.document_discriminator.value = formattedDate + randomPart + "-ICWH";
-};
-
-/*
-$$$$$$  $$$$  $$   $  $$$$
-  $$   $$  $$ $$   $ $$  $$
-  $$   $$  $$ $$ $ $ $$$$$$
-  $$   $$  $$ $$$$$$ $$  $$
-$$$$$$  $$$$   $$ $$ $$  $$
-
-*/   
-/**
- * Tạo và gán một số Document Number ngẫu nhiên.
- */
-const IA_calculate_documentNumber = () => {
-    // Tạo giá trị và gán trực tiếp vào đối tượng dữ liệu
-    a417_fields.customer_id.value = 
-        getRandomNumericString(3) + 
-        getRandomLetter() + 
-        getRandomLetter() + 
-        getRandomNumericString(4);
-}; 
-/*
- * Tính toán giá trị DD (Document Discriminator) cho bang Iowa (IA).
- * Dựa trên ngày hết hạn, họ, tên và giới tính.
- */
-const IA_calculate_DD = () => {
-    // Lấy giá trị từ các trường dữ liệu
-    const expiryDate = a417_fields.expiry_date.value;
-    const lastName = a417_fields.family_name.value;
-    const firstName = a417_fields.first_name.value;
-    const sex = a417_fields.sex.value;
-
-    // Kiểm tra dữ liệu đầu vào
-    if (expiryDate.length !== 8) {
-        showInputDataAlert("Lỗi tính DD cho IA: Ngày hết hạn không hợp lệ.");
-        return;
-    }
-    if (!lastName) {
-        showInputDataAlert("Lỗi tính DD cho IA: Vui lòng nhập Họ (Last name).");
-        return;
-    }
-    if (!firstName) {
-        showInputDataAlert("Lỗi tính DD cho IA: Vui lòng nhập Tên (First name).");
-        return;
-    }
-
-    // === BẮT ĐẦU THAY ĐỔI ===
-    // Chuyển đổi mã giới tính từ số sang chữ cái
-    let sexCode = sex; // Mặc định giữ nguyên giá trị (cho trường hợp '9')
-    if (sex === '1') {
-        sexCode = 'M';
-    } else if (sex === '2') {
-        sexCode = 'F';
-    }
-    // === KẾT THÚC THAY ĐỔI ===
-
-    // Tạo chuỗi DD theo công thức, sử dụng sexCode đã chuyển đổi
-    const ddValue = `${getRandomNumericString(9)}${lastName[0]}${firstName[0]}${getRandomNumericString(4)}${sexCode}${expiryDate.slice(2, 4)}${expiryDate.slice(0, 2)}${expiryDate.slice(-2)}D`;
-
-    // Gán giá trị vào ô input tương ứng
-    a417_fields.document_discriminator.value = ddValue;
-};
-
-const IA_calculate_ICN = () => {
-    // Ưu tiên lấy docNum từ đối tượng dữ liệu, nếu không có thì tạo mới
-    let docNum = a417_fields.customer_id.value;
-    if (!docNum) {
-        docNum = getRandomNumericString(3) + getRandomLetter() + getRandomLetter() + getRandomNumericString(4);
-        a417_fields.customer_id.value = docNum; // Lưu lại giá trị mới được tạo
-    }
-
-    const issueDate = a417_fields.issue_date.value;
-    if (!issueDate || issueDate.length !== 8) {
-        showInputDataAlert("IA ICN Error: Incorrect issue date.");
-        return;
-    }
-
-    // Tính toán số ngày và định dạng lại
-    const dayCount = getNumberOfDaysFromBeginnigOfYear(issueDate);
-    const d = ("000" + (parseInt(dayCount) + 3)).slice(-3); // Sử dụng "000" để an toàn hơn
-
-    a417_fields.inventory_control.value = docNum + issueDate.slice(-2) + d + "0101";
-};
-
-
-
-
-    /*
-$$$$$$ $$$$$   $$$$  $$  $$  $$$$
-  $$   $$  $$ $$  $$ $$  $$ $$  $$
-  $$   $$  $$ $$$$$$ $$$$$$ $$  $$
-  $$   $$  $$ $$  $$ $$  $$ $$  $$
-$$$$$$ $$$$$  $$  $$ $$  $$  $$$$
-*/
-    // IDAHO (ID) - UPDATED
-    const ID_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomLetter() + getRandomLetter() + getRandomNumericString(6) + getRandomLetter();
+    const HI_calculate_documentNumber = () => { a417_fields.customer_id.value = "H00" + getRandomNumericString(6); };
+    const HI_calculate_audit_info = () => {
+        const issueDate = a417_fields.issue_date.value;
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("HI Audit Info Error: Incorrect issue date."); return; }
+        const d = new Date(issueDate.slice(-4), parseInt(issueDate.slice(0,2)) - 1, parseInt(issueDate.slice(2,4)));
+        d.setDate(d.getDate() + 6);
+        const formattedDate = ("0" + (d.getMonth() + 1)).slice(-2) + ("0" + d.getDate()).slice(-2) + d.getFullYear();
+        a417_fields.audit_info.value = issueDate.slice(-4) + formattedDate.slice(0,4) + "_106336_2_1" + getRandomNumericString(2);
     };
-    const ID_calculate_ICN = () => {
-        // Using 2023 logic as default
-        a417_fields.inventory_control.value = "MT" + getRandomNumericString(6) + "H" + getRandomNumericString(6) + "001";
-    };
-    const ID_calculate_DD = () => {
-        // Using 2023 logic as default
-        a417_fields.document_discriminator.value = getRandomNumericString(15);
+    const HI_calculate_DD = () => {
+        const issueDate = a417_fields.issue_date.value;
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("HI DD calculation error: Incorrect issue date!"); return; }
+        let randomPart = getRandomNumericString(6);
+        for (let i = 0; i < 6; i++) { randomPart += getRandomLetterAndDigit(); }
+        const formattedDate = issueDate.slice(-4) + issueDate.slice(0,2) + issueDate.slice(2,4);
+        a417_fields.document_discriminator.value = formattedDate + randomPart + "-ICWH";
     };
 
-   /*
-$$$$$$ $$     $$     $$$$$$ $$  $$  $$$$  $$$$$$  $$$$
-  $$   $$     $$       $$   $$$ $$ $$  $$   $$   $$
-  $$   $$     $$       $$   $$ $$$ $$  $$   $$    $$$$
-  $$   $$     $$       $$   $$  $$ $$  $$   $$       $$
-$$$$$$ $$$$$$ $$$$$$ $$$$$$ $$  $$  $$$$  $$$$$$  $$$$
-*/
+    const IA_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomNumericString(3) + getRandomLetter() + getRandomLetter() + getRandomNumericString(4); }; 
+    const IA_calculate_DD = () => {
+        const { expiry_date, family_name, first_name, sex } = a417_fields;
+        if (expiry_date.value.length !== 8 || !family_name.value || !first_name.value) { showInputDataAlert("IA DD Error: Expiry date, first and last name are required."); return; }
+        let sexCode = sex.value === '1' ? 'M' : (sex.value === '2' ? 'F' : sex.value);
+        const ddValue = `${getRandomNumericString(9)}${family_name.value[0]}${first_name.value[0]}${getRandomNumericString(4)}${sexCode}${expiry_date.value.slice(2, 4)}${expiry_date.value.slice(0, 2)}${expiry_date.value.slice(-2)}D`;
+        a417_fields.document_discriminator.value = ddValue;
+    };
+    const IA_calculate_ICN = () => {
+        let docNum = a417_fields.customer_id.value;
+        if (!docNum) { docNum = getRandomNumericString(3) + getRandomLetter() + getRandomLetter() + getRandomNumericString(4); a417_fields.customer_id.value = docNum; }
+        const issueDate = a417_fields.issue_date.value;
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("IA ICN Error: Incorrect issue date."); return; }
+        const d = ("000" + (parseInt(getNumberOfDaysFromBeginnigOfYear(issueDate)) + 3)).slice(-3);
+        a417_fields.inventory_control.value = docNum + issueDate.slice(-2) + d + "0101";
+    };
 
-// ================== ILLINOIS (IL) ================= //
-        // ILLINOIS (IL) - UPDATED
-       // ILLINOIS (IL) - UPDATED
+    const ID_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomLetter() + getRandomLetter() + getRandomNumericString(6) + getRandomLetter(); };
+    const ID_calculate_ICN = () => { a417_fields.inventory_control.value = "MT" + getRandomNumericString(6) + "H" + getRandomNumericString(6) + "001"; };
+    const ID_calculate_DD = () => { a417_fields.document_discriminator.value = getRandomNumericString(15); };
+
     const IL_calculate_documentNumber = () => {
         const familyName = a417_fields.family_name.value;
-        if (!familyName) {
-            showInputDataAlert("IL DocNumber Error: Last name is required!");
-            return;
-        }
+        if (!familyName) { showInputDataAlert("IL DocNumber Error: Last name is required!"); return; }
         a417_fields.customer_id.value = familyName[0].toUpperCase() + getRandomNumericString(11);
     };
     const IL_calculate_ICN = () => {
         const docNum = a417_fields.customer_id.value;
-        if (!docNum || docNum.length !== 12) {
-            showInputDataAlert("IL ICN Error: Document number must be 12 chars!");
-            return;
-        }
+        if (!docNum || docNum.length !== 12) { showInputDataAlert("IL ICN Error: Doc num must be 12 chars!"); return; }
         a417_fields.inventory_control.value = `${docNum}IL${getRandomLetter()}${getRandomLetterAndDigit()}${getRandomLetter()}${getRandomLetter()}01`;
     };
     const IL_calculate_DD = () => {
         const issueDate = a417_fields.issue_date.value;
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("IL DD Error: Incorrect issue date (MMDDYYYY)!");
-            return;
-        }
-        // Format date from MMDDYYYY to YYYYMMDD
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("IL DD Error: Incorrect issue date!"); return; }
         const formattedDate = `${issueDate.slice(-4)}${issueDate.slice(0, 2)}${issueDate.slice(2, 4)}`;
-        
-        // Generate the rest of the string according to the note
-        a417_fields.document_discriminator.value = 
-            `${formattedDate}${getRandomNumericString(3)}${getRandomLetter()}${getRandomLetter()}${getRandomNumericString(4)}`;
+        a417_fields.document_discriminator.value = `${formattedDate}${getRandomNumericString(3)}${getRandomLetter()}${getRandomLetter()}${getRandomNumericString(4)}`;
     };
-    /*
-$$$$$$ $$  $$ $$$$$  $$$$$$  $$$$  $$  $$  $$$$
-  $$   $$$ $$ $$  $$   $$   $$  $$ $$$ $$ $$  $$
-  $$   $$ $$$ $$  $$   $$   $$$$$$ $$ $$$ $$$$$$
-  $$   $$  $$ $$  $$   $$   $$  $$ $$  $$ $$  $$
-$$$$$$ $$  $$ $$$$$  $$$$$$ $$  $$ $$  $$ $$  $$
-*/
-       // INDIANA (IN) - UPDATED
-    const IN_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomNumericString(4) + "-" + getRandomNumericString(2) + "-" + getRandomNumericString(4);
-    };
-    const IN_calculate_ICN = () => {
-        a417_fields.inventory_control.value = "03701" + getRandomNumericString(11);
-    };
+
+    const IN_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomNumericString(4) + "-" + getRandomNumericString(2) + "-" + getRandomNumericString(4); };
+    const IN_calculate_ICN = () => { a417_fields.inventory_control.value = "03701" + getRandomNumericString(11); };
     const IN_calculate_DD = () => {
         const issueDate = a417_fields.issue_date.value;
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("IN DD Error: Incorrect issue date!");
-            return;
-        }
-        
-        // Since there is no "Office Code" field, we generate a random 3-digit code here.
-        const officeCode = getRandomNumericString(3); 
-        
-        const formattedDate = issueDate.slice(0, 4) + issueDate.slice(-2); // MMDDYY
-        
-        a417_fields.document_discriminator.value = `${formattedDate}${officeCode}00${getRandomNumericString(3)}`;
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("IN DD Error: Incorrect issue date!"); return; }
+        const formattedDate = issueDate.slice(0, 4) + issueDate.slice(-2);
+        a417_fields.document_discriminator.value = `${formattedDate}${getRandomNumericString(3)}00${getRandomNumericString(3)}`;
     };
-    // === HÀM MỚI DÀNH CHO INDIANA ===
-
-const IN_calculate_issuing_office = () => {
-    // Logic này tạo ra một số ngẫu nhiên từ 21 đến 35, và thêm số "0" vào phía trước.
-    // Ví dụ: 021, 028, 035...
-    a417_fields.issuing_office.value = "0" + getRandomInt(21, 35).toString();
-};
+    const IN_calculate_issuing_office = () => { a417_fields.issuing_office.value = "0" + getRandomInt(21, 35).toString(); };
     
-/*
-$$  $$  $$$$  $$  $$  $$$$   $$$$   $$$$
-$$ $$  $$  $$ $$$ $$ $$     $$  $$ $$
-$$$$   $$$$$$ $$ $$$  $$$$  $$$$$$  $$$$
-$$ $$  $$  $$ $$  $$     $$ $$  $$     $$
-$$  $$ $$  $$ $$  $$  $$$$  $$  $$  $$$$
-*/ 
-// ======================= KANSAS (KS) ======================= //
-const KS_calculate_documentNumber = () => {
-    a417_fields.customer_id.value = "K00-" + getRandomNumericString(2) + "-" + getRandomNumericString(4);
-};
+    const KS_calculate_documentNumber = () => { a417_fields.customer_id.value = "K00-" + getRandomNumericString(2) + "-" + getRandomNumericString(4); };
+    const KS_calculate_ICN = () => {
+        const { issue_date, customer_id } = a417_fields;
+        if (!issue_date.value || !customer_id.value || customer_id.value.replace(/-/g, '').length !== 9) { showInputDataAlert("KS ICN Error: Issue Date and valid Doc Number are required."); return; }
+        const days = ("000" + (parseInt(getNumberOfDaysFromBeginnigOfYear(issue_date.value)) + 3)).slice(-3);
+        a417_fields.inventory_control.value = issue_date.value.slice(-2) + days + customer_id.value.replace(/-/g, '') + "0101";
+    };
+    const KS_calculate_DD = () => {
+        const { dob, issue_date, expiry_date, family_name, first_name, sex } = a417_fields;
+        if (!dob.value || !issue_date.value || !expiry_date.value || !family_name.value || !first_name.value || !sex.value) { showInputDataAlert("KS DD Error: All required fields (DOB, dates, names, sex) must be filled."); return; }
+        let sexCode = sex.value === '1' ? 'M' : (sex.value === '2' ? 'F' : sex.value);
+        const formattedDays = ("000" + (parseInt(getNumberOfDaysFromBeginnigOfYear(issue_date.value)) + 1)).slice(-3);
+        const ddValue = `${dob.value.slice(-2, -1)}${formattedDays}${getRandomNumericString(6)}${dob.value.slice(-1)}${family_name.value[0]}${first_name.value[0]}${issue_date.value.slice(-2)}${formattedDays}${sexCode}${expiry_date.value.slice(-2)}${expiry_date.value.slice(2,4)}${get_letter_corresponding_month(expiry_date.value.slice(0,2))}B`;
+        a417_fields.document_discriminator.value = ddValue;
+    };
 
-const KS_calculate_ICN = () => {
-    const issueDate = a417_fields.issue_date.value;
-    const docNum = a417_fields.customer_id.value;
-    if (!issueDate || !docNum) {
-        showInputDataAlert("KS ICN Error: Issue Date and Doc Number are required.");
-        return;
-    }
-    if (docNum.replace(/-/g, '').length !== 9) {
-        showInputDataAlert("KS ICN Error: Doc Number must be 9 digits (K00-00-0000).");
-        return;
-    }
-    const days = ("000" + (parseInt(getNumberOfDaysFromBeginnigOfYear(issueDate)) + 3)).slice(-3);
-    a417_fields.inventory_control.value = issueDate.slice(-2) + days + docNum.replace(/-/g, '') + "0101";
-};
-
-const KS_calculate_DD = () => {
-    // Lấy tất cả giá trị cần thiết từ đối tượng a417_fields
-    const birthDate = a417_fields.dob.value;
-    const issueDate = a417_fields.issue_date.value;
-    const expiryDate = a417_fields.expiry_date.value;
-    const lastName = a417_fields.family_name.value;
-    const firstName = a417_fields.first_name.value;
-    const sex = a417_fields.sex.value;
-
-    // Kiểm tra dữ liệu đầu vào
-    if (!birthDate || birthDate.length !== 8) {
-        showInputDataAlert("KS DD Error: Incorrect birth date (MMDDYYYY)!");
-        return;
-    }
-    if (!issueDate || issueDate.length !== 8) {
-        showInputDataAlert("KS DD Error: Incorrect issue date (MMDDYYYY)!");
-        return;
-    }
-    if (!expiryDate || expiryDate.length !== 8) {
-        showInputDataAlert("KS DD Error: Incorrect expiry date (MMDDYYYY)!");
-        return;
-    }
-    if (!lastName) {
-        showInputDataAlert("KS DD Error: Last name is required!");
-        return;
-    }
-    if (!firstName) {
-        showInputDataAlert("KS DD Error: First name is required!");
-        return;
-    }
-    if (!sex) {
-        showInputDataAlert("KS DD Error: Sex is required!");
-        return;
-    }
-
-    // === BẮT ĐẦU CẬP NHẬT ===
-    // Chuyển đổi mã giới tính từ số sang chữ cái
-    let sexCode = sex; // Mặc định giữ nguyên giá trị (cho trường hợp '9')
-    if (sex === '1') {
-        sexCode = 'M';
-    } else if (sex === '2') {
-        sexCode = 'F';
-    }
-    // === KẾT THÚC CẬP NHẬT ===
-
-    // Tính toán số ngày từ đầu năm (cộng thêm 1 theo logic của bạn)
-    const daysSinceYearStart = parseInt(getNumberOfDaysFromBeginnigOfYear(issueDate)) + 1;
-    // Định dạng thành chuỗi 3 ký tự, ví dụ: '005', '045', '123'
-    const formattedDays = ("000" + daysSinceYearStart).slice(-3);
-
-    // Ghép chuỗi DD bằng template literal và sử dụng `sexCode` đã được chuyển đổi
-    const ddValue = `${birthDate.slice(-2, -1)}${formattedDays}${getRandomNumericString(6)}${birthDate.slice(-1)}${lastName[0]}${firstName[0]}${issueDate.slice(-2)}${formattedDays}${sexCode}${expiryDate.slice(-2)}${expiryDate.slice(2,4)}${get_letter_corresponding_month(expiryDate.slice(0,2))}B`;
-    
-    a417_fields.document_discriminator.value = ddValue;
-};
-
-
-    /*
-$$  $$ $$$$$ $$  $$ $$$$$$ $$  $$  $$$$  $$  $$ $$  $$
-$$ $$  $$    $$$ $$   $$   $$  $$ $$  $$ $$ $$   $$$$
-$$$$   $$$$  $$ $$$   $$   $$  $$ $$     $$$$     $$
-$$ $$  $$    $$  $$   $$   $$  $$ $$  $$ $$ $$    $$
-$$  $$ $$$$$ $$  $$   $$    $$$$   $$$$  $$  $$   $$
-*/    // KENTUCKY (KY) - UPDATED
     const KY_calculate_documentNumber = () => {
         const lastName = a417_fields.family_name.value;
-        if (!lastName) {
-            showInputDataAlert("KY Document number error: Last Name is required!");
-            return;
-        }
+        if (!lastName) { showInputDataAlert("KY Doc num error: Last Name is required."); return; }
         a417_fields.customer_id.value = lastName.charAt(0).toUpperCase() + getRandomNumericString(8);
     };
-    const KY_calculate_ICN = () => {
-        a417_fields.inventory_control.value = "04601" + getRandomNumericString(11);
-    };
+    const KY_calculate_ICN = () => { a417_fields.inventory_control.value = "04601" + getRandomNumericString(11); };
     const KY_calculate_DD = () => {
         const issueDate = a417_fields.issue_date.value;
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("KY DD calculation error: Incorrect issue date!");
-            return;
-        }
-        // issueDate format is MMDDYYYY
-        // The rule is YYYYMMDD + 8 digits + ' 01111'
-        // The original code had a typo: issueDate.slice(3,5) should be issueDate.slice(2,4)
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("KY DD calculation error: Incorrect issue date!"); return; }
         const formattedDate = `${issueDate.slice(-4)}${issueDate.slice(0, 2)}${issueDate.slice(2, 4)}`;
         a417_fields.document_discriminator.value = `${formattedDate}${getRandomNumericString(8)} 01111`;
     };
 
-
-/*
-$$      $$$$  $$  $$ $$$$$$  $$$$  $$$$$$  $$$$  $$  $$  $$$$
-$$     $$  $$ $$  $$   $$   $$       $$   $$  $$ $$$ $$ $$  $$
-$$     $$  $$ $$  $$   $$    $$$$    $$   $$$$$$ $$ $$$ $$$$$$
-$$     $$  $$ $$  $$   $$       $$   $$   $$  $$ $$  $$ $$  $$
-$$$$$$  $$$$   $$$$  $$$$$$  $$$$  $$$$$$ $$  $$ $$  $$ $$  $$
-*/    
-const LA_calculate_documentNumber = () => {
-    a417_fields.customer_id.value = (Math.random() > 0.5 ? "00" : "01") + getRandomNumericString(7);
-};
-
-const LA_calculate_ICN = () => {
-    a417_fields.inventory_control.value = "00700" + getRandomNumericString(11);
-};
-
-// Hàm mới cho Audit Info
-const LA_calculate_audit_info = () => {
-    a417_fields.audit_info.value = getRandomNumericString(4);
-};
-
-// Hàm mới cho Issuing Office
-const LA_calculate_issuing_office = () => {
-    a417_fields.issuing_office.value = "0" + getRandomInt(21, 35).toString();
-};
-    /*
-$$   $  $$$$   $$$$   $$$$   $$$$   $$$$  $$  $$ $$  $$  $$$$  $$$$$ $$$$$$ $$$$$$  $$$$
-$$$ $$ $$  $$ $$     $$     $$  $$ $$  $$ $$  $$ $$  $$ $$     $$      $$     $$   $$
-$$ $ $ $$$$$$  $$$$   $$$$  $$$$$$ $$     $$$$$$ $$  $$  $$$$  $$$$    $$     $$    $$$$
-$$   $ $$  $$     $$     $$ $$  $$ $$  $$ $$  $$ $$  $$     $$ $$      $$     $$       $$
-$$   $ $$  $$  $$$$   $$$$  $$  $$  $$$$  $$  $$  $$$$   $$$$  $$$$$   $$     $$    $$$$
-*/
-     // MASSACHUSETTS (MA) - UPDATED
-    const MA_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = "S" + getRandomNumericString(8);
-    };
+    const LA_calculate_documentNumber = () => { a417_fields.customer_id.value = (Math.random() > 0.5 ? "00" : "01") + getRandomNumericString(7); };
+    const LA_calculate_ICN = () => { a417_fields.inventory_control.value = "00700" + getRandomNumericString(11); };
+    const LA_calculate_audit_info = () => { a417_fields.audit_info.value = getRandomNumericString(4); };
+    const LA_calculate_issuing_office = () => { a417_fields.issuing_office.value = "0" + getRandomInt(21, 35).toString(); };
+    
+    const MA_calculate_documentNumber = () => { a417_fields.customer_id.value = "S" + getRandomNumericString(8); };
     const MA_calculate_ICN = () => {
-        const docNum = a417_fields.customer_id.value;
-        const issueDate = a417_fields.issue_date.value;
-        if (!docNum || docNum.length !== 9) {
-            showInputDataAlert("MA ICN Error: Document Number (must be 'S' + 8 digits) is required!");
-            return;
-        }
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("MA ICN Error: Incorrect Issue Date!");
-            return;
-        }
-        a417_fields.inventory_control.value = issueDate.slice(-2) + getNumberOfDaysFromBeginnigOfYear(issueDate) + docNum + "0601";
+        const { customer_id, issue_date } = a417_fields;
+        if (!customer_id.value || customer_id.value.length !== 9 || !issue_date.value || issue_date.value.length !== 8) { showInputDataAlert("MA ICN Error: Doc Num ('S' + 8 digits) and Issue Date are required."); return; }
+        a417_fields.inventory_control.value = issue_date.value.slice(-2) + getNumberOfDaysFromBeginnigOfYear(issue_date.value) + customer_id.value + "0601";
     };
     const MA_calculate_DD = () => {
         const issueDate = a417_fields.issue_date.value;
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("MA DD calculation error: Incorrect issue date!");
-            return;
-        }
-        // This logic uses a fixed revision date as per the original code.
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("MA DD calculation error: Incorrect issue date!"); return; }
         a417_fields.document_discriminator.value = issueDate + " REV 02222016";
     };
 
-/*
-$$   $  $$$$  $$$$$  $$  $$ $$      $$$$  $$  $$ $$$$$
-$$$ $$ $$  $$ $$  $$  $$$$  $$     $$  $$ $$$_$$ $$  $$
-$$ $ $ $$$$$$ $$$$$    $$   $$     $$$$$$ $$ $$$ $$  $$
-$$   $ $$  $$ $$  $$   $$   $$     $$  $$ $$  $$ $$  $$
-$$   $ $$  $$ $$  $$   $$   $$$$$$_$$  $$ $$  $$ $$$$$
-*/
-
-const MD_calculate_documentNumber = () => {
-    const lastName = a417_fields.family_name.value;
-    if (!lastName) {
-        showInputDataAlert("MD Document Number Error: Last name is required!");
-        return;
-    }
-    // Thay vào đó, chúng tôi tạo một số giấy phép theo định dạng phổ biến của MD.
-    // Nếu bạn có hàm CalculateDL, hãy thay thế logic dưới đây.
-    // Định dạng MD thường là: 1 chữ cái, 12 số.
-    const documentNumber = 
-        lastName.charAt(0).toUpperCase() + "-" +
-        getRandomNumericString(3) + "-" +
-        getRandomNumericString(3) + "-" +
-        getRandomNumericString(3) + "-" +
-        getRandomNumericString(3);
-
-    a417_fields.customer_id.value = documentNumber;
-};
-
-const MD_calculate_ICN = () => {
-    a417_fields.inventory_control.value = "100" + getRandomNumericString(7);
-};
-
-const MD_calculate_DD = () => {
-    // Logic: 6 số + 2 chữ cái + 1 số
-    const ddValue = `${getRandomNumericString(6)}${getRandomLetter()}${getRandomLetter()}${getRandomDigit()}`;
-    a417_fields.document_discriminator.value = ddValue;
-};
-
-/*
-$$   $  $$$$  $$$$$$ $$  $$ $$$$$
-$$$ $$ $$  $$   $$   $$$ $$ $$
-$$ $ $ $$$$$$   $$   $$ $$$ $$$$
-$$   $ $$  $$   $$   $$  $$ $$
-$$   $ $$  $$ $$$$$$ $$  $$ $$$$$
-*/
-
-        // MAINE (ME) - UPDATED
-    const ME_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomNumericString(7);
+    const MD_calculate_documentNumber = () => {
+        const lastName = a417_fields.family_name.value;
+        if (!lastName) { showInputDataAlert("MD Doc Num Error: Last name is required."); return; }
+        a417_fields.customer_id.value = lastName.charAt(0).toUpperCase() + "-" + getRandomNumericString(3) + "-" + getRandomNumericString(3) + "-" + getRandomNumericString(3) + "-" + getRandomNumericString(3);
     };
+    const MD_calculate_ICN = () => { a417_fields.inventory_control.value = "100" + getRandomNumericString(7); };
+    const MD_calculate_DD = () => { a417_fields.document_discriminator.value = `${getRandomNumericString(6)}${getRandomLetter()}${getRandomLetter()}${getRandomDigit()}`; };
+
+    const ME_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomNumericString(7); };
     const ME_calculate_ICN = () => {
-        const docNum = a417_fields.customer_id.value;
-        const issueDate = a417_fields.issue_date.value;
-        if (!docNum || docNum.length !== 7) {
-            showInputDataAlert("ME ICN Error: Document Number (7 digits) is required!");
-            return;
-        }
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("ME ICN Error: Incorrect Issue Date!");
-            return;
-        }
-        const d = ("00" + (parseInt(getNumberOfDaysFromBeginnigOfYear(issueDate)) + 4)).slice(-3);
-        a417_fields.inventory_control.value = `F${issueDate.slice(-2)}${d}${docNum}0101`;
+        const { customer_id, issue_date } = a417_fields;
+        if (!customer_id.value || customer_id.value.length !== 7 || !issue_date.value || issue_date.value.length !== 8) { showInputDataAlert("ME ICN Error: Doc Num (7 digits) and Issue Date are required."); return; }
+        const d = ("00" + (parseInt(getNumberOfDaysFromBeginnigOfYear(issue_date.value)) + 4)).slice(-3);
+        a417_fields.inventory_control.value = `F${issue_date.value.slice(-2)}${d}${customer_id.value}0101`;
     };
-    const ME_calculate_DD = () => {
-        a417_fields.document_discriminator.value = '0'.repeat(17) + getRandomNumericString(8);
-    };
+    const ME_calculate_DD = () => { a417_fields.document_discriminator.value = '0'.repeat(17) + getRandomNumericString(8); };
 
-
-    /*
-$$   $ $$$$$$  $$$$  $$  $$ $$$$$$  $$$$  $$$$  $$  $$
-$$$ $$   $$   $$  $$ $$  $$   $$   $$     $$  $$ $$$ $$
-$$ $ $   $$   $$     $$$$$$   $$   $$ $$$ $$$$$$ $$ $$$
-$$   $   $$   $$  $$ $$  $$   $$   $$  $$ $$  $$ $$  $$
-$$   $ $$$$$$  $$$$  $$  $$ $$$$$$  $$$$  $$  $$ $$  $$
-*/
-
-             // MICHIGAN (MI) - UPDATED WITH SPACES
     const MI_calculate_documentNumber = () => {
         const lastName = a417_fields.family_name.value;
-        if (!lastName) {
-            showInputDataAlert("MI Doc Number error: Last Name is required!");
-            return;
-        }
-        // Format: LNNN NNN NNN (1 Letter, 9 numbers, 2 spaces) = 12 characters.
-        // This is a common visual format.
-        a417_fields.customer_id.value = 
-            lastName.charAt(0)+ " " .toUpperCase() + 
-            getRandomNumericString(3) + " " +
-            getRandomNumericString(3) + " " +
-            getRandomNumericString(3);
+        if (!lastName) { showInputDataAlert("MI Doc Number error: Last Name is required!"); return; }
+        a417_fields.customer_id.value = lastName.charAt(0).toUpperCase() + " " + getRandomNumericString(3) + " " + getRandomNumericString(3) + " " + getRandomNumericString(3);
     };
     const MI_calculate_ICN = () => {
-        const docNumWithSpaces = a417_fields.customer_id.value;
-        const birthDate = a417_fields.dob.value;
-        const expiryDate = a417_fields.expiry_date.value;
-        
-        if (!docNumWithSpaces) { 
-            showInputDataAlert("MI ICN calculation error: A valid Document Number is required! Please generate it first.");
-            return;
-        }
-        if (!birthDate || birthDate.length !== 8) {
-            showInputDataAlert("MI ICN calculation error: Incorrect birth date!");
-            return;
-        }
-        if (!expiryDate || expiryDate.length !== 8) {
-            showInputDataAlert("MI ICN calculation error: Incorrect expiry date!");
-            return;
-        }
-        
-        // IMPORTANT: Use the document number *without* spaces for the calculation.
-        const docNumWithoutSpaces = docNumWithSpaces.replace(/\s/g, '');
-        
-        const dob_YYYYMMDD = birthDate.slice(-4) + birthDate.slice(0, 2) + birthDate.slice(2, 4);
-        const exp_YYMM = expiryDate.slice(-2) + expiryDate.slice(0, 2);
+        const { customer_id, dob, expiry_date } = a417_fields;
+        if (!customer_id.value || !dob.value || dob.value.length !== 8 || !expiry_date.value || expiry_date.value.length !== 8) { showInputDataAlert("MI ICN error: Valid Doc Num, DOB, and Expiry Date are required."); return; }
+        const docNumWithoutSpaces = customer_id.value.replace(/\s/g, '');
+        const dob_YYYYMMDD = dob.value.slice(-4) + dob.value.slice(0, 2) + dob.value.slice(2, 4);
+        const exp_YYMM = expiry_date.value.slice(-2) + expiry_date.value.slice(0, 2);
         a417_fields.inventory_control.value = docNumWithoutSpaces + dob_YYYYMMDD + exp_YYMM;
     };
-    const MI_calculate_DD = () => {
-        // Michigan DD format is a 13-digit random number.
-        a417_fields.document_discriminator.value = getRandomNumericString(13);
-    };
-    /*
-$$   $ $$$$$$ $$  $$ $$  $$ $$$$$  $$$$   $$$$  $$$$$$  $$$$
-$$$ $$   $$   $$$ $$ $$$ $$ $$    $$     $$  $$   $$   $$  $$
-$$ $ $   $$   $$ $$$ $$ $$$ $$$$   $$$$  $$  $$   $$   $$$$$$
-$$   $   $$   $$  $$ $$  $$ $$        $$ $$  $$   $$   $$  $$
-$$   $ $$$$$$ $$  $$ $$  $$ $$$$$  $$$$   $$$$    $$   $$  $$
-*/
-    // MINNESOTA (MN) - UPDATED
-    const MN_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomLetter() + getRandomNumericString(12);
-    };
-    const MN_calculate_ICN = () => {
-        const docNum = a417_fields.customer_id.value;
-        const issueDate = a417_fields.issue_date.value;
-        if (!docNum || docNum.length !== 13) {
-            showInputDataAlert("MN ICN Error: Document Number (must be 13 chars) is required!");
-            return;
-        }
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("MN ICN Error: Incorrect Issue Date!");
-            return;
-        }
-        const d = ("00" + (parseInt(getNumberOfDaysFromBeginnigOfYear(issueDate)) + 3)).slice(-3);
-        a417_fields.inventory_control.value = docNum + "01" + d + "01";
-    };
-    const MN_calculate_DD = () => {
-        a417_fields.document_discriminator.value = '0'.repeat(7) + getRandomNumericString(7);
-    };
+    const MI_calculate_DD = () => { a417_fields.document_discriminator.value = getRandomNumericString(13); };
 
-    // MO
+    const MN_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomLetter() + getRandomNumericString(12); };
+    const MN_calculate_ICN = () => {
+        const { customer_id, issue_date } = a417_fields;
+        if (!customer_id.value || customer_id.value.length !== 13 || !issue_date.value || issue_date.value.length !== 8) { showInputDataAlert("MN ICN Error: Doc Num (13 chars) and Issue Date are required."); return; }
+        const d = ("00" + (parseInt(getNumberOfDaysFromBeginnigOfYear(issue_date.value)) + 3)).slice(-3);
+        a417_fields.inventory_control.value = customer_id.value + "01" + d + "01";
+    };
+    const MN_calculate_DD = () => { a417_fields.document_discriminator.value = '0'.repeat(7) + getRandomNumericString(7); };
+
     const MO_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomLetter() + "0" + getRandomNumericString(8); };
     const MO_calculate_ICN = () => {
-        const issueDate = a417_fields.issue_date.value;
-        const docNum = a417_fields.customer_id.value;
-        if (!docNum || docNum.length !== 10 || !issueDate) { showInputDataAlert("MO ICN Error: Doc Number (10 chars) and Issue Date are required."); return; }
-        const days = parseInt(getNumberOfDaysFromBeginnigOfYear(issueDate)) + 2;
-        a417_fields.inventory_control.value = issueDate.slice(-2) + ("00" + days).slice(-3) + docNum + "0101";
+        const { issue_date, customer_id } = a417_fields;
+        if (!customer_id.value || customer_id.value.length !== 10 || !issue_date.value) { showInputDataAlert("MO ICN Error: Doc Num (10 chars) and Issue Date are required."); return; }
+        const days = parseInt(getNumberOfDaysFromBeginnigOfYear(issue_date.value)) + 2;
+        a417_fields.inventory_control.value = issue_date.value.slice(-2) + ("00" + days).slice(-3) + customer_id.value + "0101";
     };
-        const MO_calculate_DD = () => {
+    const MO_calculate_DD = () => {
         const issueDate = a417_fields.issue_date.value;
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("MO DD calculation error. Incorrect issue date!");
-            return;
-        }
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("MO DD calculation error. Incorrect issue date!"); return; }
         a417_fields.document_discriminator.value = issueDate.slice(-2) + "14" + getRandomNumericString(4) + "00" + getRandomNumericString(2);
     };
 
-   /*
-$$   $ $$$$$$  $$$$   $$$$  $$$$$$  $$$$   $$$$  $$$$$$ $$$$$  $$$$$  $$$$$$
-$$$ $$   $$   $$     $$       $$   $$     $$       $$   $$  $$ $$  $$   $$ 
-$$ $ $   $$    $$$$   $$$$    $$    $$$$   $$$$    $$   $$$$$  $$$$$    $$ 
-$$   $   $$       $$     $$   $$       $$     $$   $$   $$     $$       $$ 
-$$   $ $$$$$$  $$$$   $$$$  $$$$$$  $$$$   $$$$  $$$$$$ $$     $$     $$$$$$
-*/        // MISSISSIPPI (MS) - UPDATED
-    const MS_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = "80" + getRandomNumericString(7);
-    };
-    const MS_calculate_ICN = () => {
-        a417_fields.inventory_control.value = "05100" + getRandomNumericString(6) + "23" + getRandomNumericString(3);
-    };
-       const MS_calculate_DD = () => {
-        const birthDate = a417_fields.dob.value;
-        const issueDate = a417_fields.issue_date.value;
-        const expiryDate = a417_fields.expiry_date.value;
-        const lastName = a417_fields.family_name.value;
-        const firstName = a417_fields.first_name.value;
-        const sex = a417_fields.sex.value;
-
-        // Ensure all fields have valid data
-        if (!birthDate || birthDate.length !== 8) { showInputDataAlert("MS DD Error: A valid Birth Date is required."); return; }
-        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("MS DD Error: A valid Issue Date is required."); return; }
-        if (!expiryDate || expiryDate.length !== 8) { showInputDataAlert("MS DD Error: A valid Expiry Date is required."); return; }
-        if (!lastName) { showInputDataAlert("MS DD Error: Last Name is required."); return; }
-        if (!firstName) { showInputDataAlert("MS DD Error: First Name is required."); return; }
-        if (!sex) { showInputDataAlert("MS DD Error: Sex is required."); return; }
-        
+    const MS_calculate_documentNumber = () => { a417_fields.customer_id.value = "80" + getRandomNumericString(7); };
+    const MS_calculate_ICN = () => { a417_fields.inventory_control.value = "05100" + getRandomNumericString(6) + "23" + getRandomNumericString(3); };
+    const MS_calculate_DD = () => {
+        const { dob, issue_date, expiry_date, family_name, first_name, sex } = a417_fields;
+        if (!dob.value || !issue_date.value || !expiry_date.value || !family_name.value || !first_name.value || !sex.value) { showInputDataAlert("MS DD Error: All required fields (DOB, dates, names, sex) must be filled."); return; }
         let s = "";
         for(let i = 0; i < 7; i++) { s += getRandomLetterAndDigit(); }
-
-        const d = getNumberOfDaysFromBeginnigOfYear(issueDate);
-
-        const expiryMonth = parseInt(expiryDate.slice(0, 2), 10);
-        
-        if (isNaN(expiryMonth) || expiryMonth < 1 || expiryMonth > 12) {
-            showInputDataAlert("MS DD Error: Invalid month in Expiry Date.");
-            return;
-        }
-
-        const monthLetter = get_letter_corresponding_month(expiryMonth);
-        
-        if (!monthLetter) {
-            showInputDataAlert("MS DD Error: Could not generate month letter for Expiry Date.");
-            return;
-        }
-
-        a417_fields.document_discriminator.value =
-            birthDate.slice(-2, -1) + 
-            getRandomLetter() + 
-            s + 
-            birthDate.slice(-1) +
-            lastName.charAt(0).toUpperCase() + 
-            firstName.charAt(0).toUpperCase() + 
-            issueDate.slice(-2) + 
-            d + 
-            sex +
-            expiryDate.slice(-2) + 
-            expiryDate.slice(2, 4) + 
-            monthLetter;
+        const d = getNumberOfDaysFromBeginnigOfYear(issue_date.value);
+        const monthLetter = get_letter_corresponding_month(expiry_date.value.slice(0, 2));
+        if (!monthLetter) { showInputDataAlert("MS DD Error: Could not generate month letter for Expiry Date."); return; }
+        a417_fields.document_discriminator.value = dob.value.slice(-2, -1) + getRandomLetter() + s + dob.value.slice(-1) + family_name.value.charAt(0).toUpperCase() + first_name.value.charAt(0).toUpperCase() + issue_date.value.slice(-2) + d + sex.value + expiry_date.value.slice(-2) + expiry_date.value.slice(2, 4) + monthLetter;
     };
-    /*
-$$   $  $$$$  $$  $$ $$$$$$  $$$$  $$  $$  $$$$
-$$$ $$ $$  $$ $$$ $$   $$   $$  $$ $$$ $$ $$  $$
-$$ $ $ $$  $$ $$ $$$   $$   $$$$$$ $$ $$$ $$$$$$
-$$   $ $$  $$ $$  $$   $$   $$  $$ $$  $$ $$  $$
-$$   $  $$$$  $$  $$   $$   $$  $$ $$  $$ $$  $$
-*/
-       // MONTANA (MT) - UPDATED
+
     const MT_calculate_documentNumber = () => {
         const birthDate = a417_fields.dob.value;
-        if (!birthDate || birthDate.length !== 8) {
-            showInputDataAlert("MT Document Number Error: Incorrect birth date!");
-            return;
-        }
-        // Original logic was birthDate.slice(3,5) which is incorrect for MMDDYYYY.
-        // Corrected to birthDate.slice(2,4) for DD.
-        a417_fields.customer_id.value = 
-            birthDate.slice(0, 2) + 
-            getRandomNumericString(3) + 
-            birthDate.slice(-4) + 
-            "41" + 
-            birthDate.slice(2, 4);
+        if (!birthDate || birthDate.length !== 8) { showInputDataAlert("MT Doc Num Error: Incorrect birth date!"); return; }
+        a417_fields.customer_id.value = birthDate.slice(0, 2) + getRandomNumericString(3) + birthDate.slice(-4) + "41" + birthDate.slice(2, 4);
     };
     const MT_calculate_ICN = () => {
         let data1 = "";
-        for (let i = 0; i < 6; i++) {
-            data1 += getRandomLetterAndDigit();
-        }
+        for (let i = 0; i < 6; i++) { data1 += getRandomLetterAndDigit(); }
         a417_fields.inventory_control.value = "1100" + getRandomDigit() + data1 + "FMT" + getRandomLetterAndDigit() + getRandomLetter() + getRandomLetter() + "001";
     };
     const MT_calculate_DD = () => {
         const issueDate = a417_fields.issue_date.value;
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("MT DD calculation error: Incorrect issue date!");
-            return;
-        }
-        const formattedDate = `${issueDate.slice(-4)}${issueDate.slice(0, 2)}${issueDate.slice(2, 4)}`; // YYYYMMDD
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("MT DD calculation error: Incorrect issue date!"); return; }
+        const formattedDate = `${issueDate.slice(-4)}${issueDate.slice(0, 2)}${issueDate.slice(2, 4)}`;
         a417_fields.document_discriminator.value = formattedDate + getRandomNumericString(12);
     };
 
-    /*
-$$  $$  $$$$  $$$$$  $$$$$$ $$  $$     $$$$   $$$$  $$$$$   $$$$  $$     $$$$$$ $$  $$  $$$$
-$$$ $$ $$  $$ $$  $$   $$   $$  $$    $$  $$ $$  $$ $$  $$ $$  $$ $$       $$   $$$ $$ $$  $$
-$$ $$$ $$  $$ $$$$$    $$   $$$$$$    $$     $$$$$$ $$$$$  $$  $$ $$       $$   $$ $$$ $$$$$$
-$$  $$ $$  $$ $$  $$   $$   $$  $$    $$  $$ $$  $$ $$  $$ $$  $$ $$       $$   $$  $$ $$  $$
-$$  $$  $$$$  $$  $$   $$   $$  $$     $$$$  $$  $$ $$  $$  $$$$  $$$$$$ $$$$$$ $$  $$ $$  $$
-*/
-
-
-// ================================== NORTH CAROLINA (NC) ================================= //
-
-       // NORTH CAROLINA (NC) - UPDATED
-    const NC_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = "00000" + getRandomNumericString(7);
-    };
+    const NC_calculate_documentNumber = () => { a417_fields.customer_id.value = "00000" + getRandomNumericString(7); };
     const NC_calculate_ICN = () => {
         const docNum = a417_fields.customer_id.value;
-        if (!docNum || docNum.length !== 12) {
-            showInputDataAlert("NC ICN Error: Document Number (must be 12 chars) is required!");
-            return;
-        }
-        a417_fields.inventory_control.value = 
-            docNum + 
-            "NC" + 
-            getRandomLetterAndDigit() + 
-            getRandomLetterAndDigit() + 
-            getRandomLetterAndDigit() + 
-            getRandomLetterAndDigit() + 
-            "01";
+        if (!docNum || docNum.length !== 12) { showInputDataAlert("NC ICN Error: Doc Num (12 chars) is required!"); return; }
+        a417_fields.inventory_control.value = docNum + "NC" + getRandomLetterAndDigit() + getRandomLetterAndDigit() + getRandomLetterAndDigit() + getRandomLetterAndDigit() + "01";
     };
-    const NC_calculate_DD = () => {
-        a417_fields.document_discriminator.value = "001" + getRandomNumericString(7);
-    };
+    const NC_calculate_DD = () => { a417_fields.document_discriminator.value = "001" + getRandomNumericString(7); };
 
-/*
-$$  $$  $$$$  $$$$$  $$$$$$ $$  $$      $$$$$   $$$$  $$  $$  $$$$  $$$$$$  $$$$
-$$$ $$ $$  $$ $$  $$   $$   $$  $$      $$  $$ $$  $$ $$ $$  $$  $$   $$   $$  $$
-$$ $$$ $$  $$ $$$$$    $$   $$$$$$      $$  $$ $$$$$$ $$$$   $$  $$   $$   $$$$$$
-$$  $$ $$  $$ $$  $$   $$   $$  $$      $$  $$ $$  $$ $$ $$  $$  $$   $$   $$  $$
-$$  $$  $$$$  $$  $$   $$   $$  $$      $$$$$  $$  $$ $$  $$  $$$$    $$   $$  $$
-*/
-
-    // NORTH DAKOTA (ND) - UPDATED
     const ND_calculate_documentNumber = () => {
-        const birthDate = a417_fields.dob.value;
-        const lastName = a417_fields.family_name.value;
-        if (!birthDate || birthDate.length !== 8) {
-            showInputDataAlert("ND Doc Number Error: Incorrect birth date!");
-            return;
-        }
-        if (!lastName) {
-            showInputDataAlert("ND Doc Number Error: Last name is required!");
-            return;
-        }
-        const tempLastName = lastName + "XX"; // Ensure lastname is at least 3 chars
-        a417_fields.customer_id.value = 
-            tempLastName.slice(0, 3).toUpperCase() + 
-            birthDate.slice(-2) + 
-            getRandomNumericString(4);
+        const { dob, family_name } = a417_fields;
+        if (!dob.value || dob.value.length !== 8 || !family_name.value) { showInputDataAlert("ND Doc Num Error: Incorrect DOB or Last Name!"); return; }
+        a417_fields.customer_id.value = (family_name.value + "XX").slice(0, 3).toUpperCase() + dob.value.slice(-2) + getRandomNumericString(4);
     };
-    const ND_calculate_ICN = () => {
-        // Using 2023 logic as default
-        a417_fields.inventory_control.value = "05100" + getRandomNumericString(11);
-    };
+    const ND_calculate_ICN = () => { a417_fields.inventory_control.value = "05100" + getRandomNumericString(11); };
     const ND_calculate_DD = () => {
-        const birthDate = a417_fields.dob.value;
-        const expiryDate = a417_fields.expiry_date.value;
-        const height = a417_fields.height.value;
-        const docNum = a417_fields.customer_id.value;
-        const lastName = a417_fields.family_name.value;
-        const firstName = a417_fields.first_name.value;
-        const sex = a417_fields.sex.value;
-
-        // Validation checks
-        if (!birthDate || birthDate.length !== 8) { showInputDataAlert("ND DD Error: A valid Birth Date is required."); return; }
-        if (!expiryDate || expiryDate.length !== 8) { showInputDataAlert("ND DD Error: A valid Expiry Date is required."); return; }
-        if (!height) { showInputDataAlert("ND DD Error: Height is required."); return; }
-        if (!docNum || docNum.length !== 9) { showInputDataAlert("ND DD Error: A valid 9-char Document Number is required."); return; }
-        if (!lastName) { showInputDataAlert("ND DD Error: Last Name is required."); return; }
-        if (!firstName) { showInputDataAlert("ND DD Error: First Name is required."); return; }
-        if (!sex) { showInputDataAlert("ND DD Error: Sex is required."); return; }
-
-        const sex_digit = sex === "1" ? "5" : "1"; // '1' for male in new structure
-
-        a417_fields.document_discriminator.value = 
-            birthDate.slice(-2, -1) + 
-            docNum + 
-            lastName.charAt(0).toUpperCase() + 
-            firstName.charAt(0).toUpperCase() +
-            sex_digit + "2" + 
-            expiryDate.slice(-1) + 
-            expiryDate.slice(2, 4) + 
-            getRandomLetter().toLowerCase() + 
-            getRandomLetter() + 
-            height + "YDZ";
+        const { dob, expiry_date, height, customer_id, family_name, first_name, sex } = a417_fields;
+        if (!dob.value || !expiry_date.value || !height.value || !customer_id.value || !family_name.value || !first_name.value || !sex.value) { showInputDataAlert("ND DD Error: All required fields must be filled."); return; }
+        const sex_digit = sex.value === "1" ? "5" : "1";
+        a417_fields.document_discriminator.value = dob.value.slice(-2, -1) + customer_id.value + family_name.value.charAt(0).toUpperCase() + first_name.value.charAt(0).toUpperCase() + sex_digit + "2" + expiry_date.value.slice(-1) + expiry_date.value.slice(2, 4) + getRandomLetter().toLowerCase() + getRandomLetter() + height.value + "YDZ";
     };
-    /*
-$$  $$ $$$$$ $$$$$  $$$$$   $$$$   $$$$  $$  $$  $$$$
-$$$ $$ $$    $$  $$ $$  $$ $$  $$ $$     $$ $$  $$  $$
-$$ $$$ $$$$  $$$$$  $$$$$  $$$$$$  $$$$  $$$$   $$$$$$
-$$  $$ $$    $$  $$ $$  $$ $$  $$     $$ $$ $$  $$  $$
-$$  $$ $$$$$ $$$$$  $$  $$ $$  $$  $$$$  $$  $$ $$  $$
-*/
-        // NEBRASKA (NE) - UPDATED
-    const NE_calculate_documentNumber = () => {
-        const alphabet = "ABCEGHV";
-        a417_fields.customer_id.value = alphabet[Math.floor(Math.random() * alphabet.length)] + getRandomNumericString(8);
-    };
+
+    const NE_calculate_documentNumber = () => { a417_fields.customer_id.value = "ABCEGHV"[Math.floor(Math.random() * 7)] + getRandomNumericString(8); };
     const NE_calculate_ICN = () => {
         const docNum = a417_fields.customer_id.value;
-        if (!docNum || docNum.length !== 9) {
-            showInputDataAlert("NE ICN calculation error: Incorrect document number (must be 9 chars)!");
-            return;
-        }
+        if (!docNum || docNum.length !== 9) { showInputDataAlert("NE ICN error: Incorrect doc num (9 chars)!"); return; }
         const icnValue = docNum + "NETYCO01";
         a417_fields.inventory_control.value = icnValue;
-        
-        // After setting ICN, immediately calculate and set DD
         NE_calculate_DD(icnValue); 
     };
     const NE_calculate_DD = (icn_from_previous_function = null) => {
-        // This function can be called independently or from the ICN function.
         const icn = icn_from_previous_function || a417_fields.inventory_control.value;
-        if (!icn || icn.length !== 17) {
-            showInputDataAlert("NE DD calculation error: A valid 17-char ICN is required! Please generate ICN first if calling this directly.");
-            return;
-        }
+        if (!icn || icn.length !== 17) { showInputDataAlert("NE DD error: A valid 17-char ICN is required."); return; }
         a417_fields.document_discriminator.value = "054" + icn + getRandomNumericString(5);
     };
-    /*const NE_calculate_ICN = () => {
-    const icn = "0540000" + getRandomNumericString(4) + "00000";
-    document.getElementById("inputICN").value = icn;
-    document.getElementById("inputDD").value = icn;
-};
 
-const NE_calculate_DD = () => {
-    const icn = document.getElementById("inputICN").value.trim();
-    if (icn.length !== 16) {
-        showInputDataAlert("DD calculation error. Incorrect ICN!");
-        return;
-    }
-    document.getElementById("inputDD").value = icn;
-};*/
-
-
-  /*
-$$  $$ $$$$$ $$   $     $$  $$  $$$$  $$   $ $$$$$   $$$$  $$  $$ $$$$$$ $$$$$  $$$$$
-$$$ $$ $$    $$   $     $$  $$ $$  $$ $$$ $$ $$  $$ $$     $$  $$   $$   $$  $$ $$
-$$ $$$ $$$$  $$ $ $     $$$$$$ $$$$$$ $$ $ $ $$$$$   $$$$  $$$$$$   $$   $$$$$  $$$$
-$$  $$ $$    $$$$$$     $$  $$ $$  $$ $$   $ $$         $$ $$  $$   $$   $$  $$ $$
-$$  $$ $$$$$  $$ $$     $$  $$ $$  $$ $$   $ $$      $$$$  $$  $$ $$$$$$ $$  $$ $$$$$
-*/
-       // NEW HAMPSHIRE (NH) - UPDATED
-    const NH_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = "NHL" + getRandomNumericString(8);
-    };
+    const NH_calculate_documentNumber = () => { a417_fields.customer_id.value = "NHL" + getRandomNumericString(8); };
     const NH_calculate_ICN = () => {
         const icnValue = "0" + getRandomNumericString(7);
         a417_fields.inventory_control.value = icnValue;
-        // Also set the DD value, as per the original logic
         a417_fields.document_discriminator.value = icnValue;
     };
     const NH_calculate_DD = () => {
-        // This function simply copies the ICN value to the DD field
         const icnValue = a417_fields.inventory_control.value;
-        if (!icnValue || icnValue.length !== 8) {
-            showInputDataAlert("NH DD calculation error: A valid 8-char ICN is required. Please generate ICN first.");
-            return;
-        }
+        if (!icnValue || icnValue.length !== 8) { showInputDataAlert("NH DD error: A valid 8-char ICN is required."); return; }
         a417_fields.document_discriminator.value = icnValue;
     };
-    /*
-$$  $$ $$$$$ $$   $    $$$$$$ $$$$$ $$$$$   $$$$  $$$$$ $$  $$
-$$$ $$ $$    $$   $        $$ $$    $$  $$ $$     $$     $$$$
-$$ $$$ $$$$  $$ $ $        $$ $$$$  $$$$$   $$$$  $$$$    $$
-$$  $$ $$    $$$$$$    $$  $$ $$    $$  $$     $$ $$      $$
-$$  $$ $$$$$  $$ $$     $$$$  $$$$$ $$  $$  $$$$  $$$$$   $$
-*/
-        // NEW JERSEY (NJ) - UPDATED
+
     const NJ_calculate_documentNumber = () => {
-        const lastName = a417_fields.family_name.value;
-        const firstName = a417_fields.first_name.value;
-        const middleName = a417_fields.middle_name.value;
-        const birthDate = a417_fields.dob.value;
-        if (!lastName || !firstName || !birthDate || birthDate.length !== 8) {
-            showInputDataAlert("NJ Doc Number Error: Last Name, First Name, and a valid DOB are required.");
-            return;
-        }
-        // Since CalculateDL is not available, we create a plausible format.
-        // NJ DL# is Letter + 4 digits + 5 digits + 5 digits
-        a417_fields.customer_id.value = 
-            lastName.charAt(0).toUpperCase() + 
-            getRandomNumericString(4) + 
-            getRandomNumericString(5) + 
-            getRandomNumericString(5);
+        const { family_name, first_name, dob } = a417_fields;
+        if (!family_name.value || !first_name.value || !dob.value || dob.value.length !== 8) { showInputDataAlert("NJ Doc Num Error: Last Name, First Name, and a valid DOB are required."); return; }
+        a417_fields.customer_id.value = family_name.value.charAt(0).toUpperCase() + getRandomNumericString(4) + getRandomNumericString(5) + getRandomNumericString(5);
     };
     const NJ_calculate_ICN = () => {
         const lastName = a417_fields.family_name.value;
-        if (!lastName) {
-            showInputDataAlert("NJ ICN Error: Last Name is required.");
-            return;
-        }
+        if (!lastName) { showInputDataAlert("NJ ICN Error: Last Name is required."); return; }
         let random_data = "";
         for (let i = 0; i < 9; i++) { random_data += getRandomLetterAndDigit(); }
         random_data += "NJ" + getRandomNumericString(2);
@@ -1590,692 +750,187 @@ $$  $$ $$$$$  $$ $$     $$$$  $$$$$ $$  $$  $$$$  $$$$$   $$
     };
     const NJ_calculate_DD = () => {
         const issueDate = a417_fields.issue_date.value;
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("NJ DD Error: Incorrect issue date!");
-            return;
-        }
-        // The original logic required an "option1" field which doesn't exist.
-        // We will generate a random letter for the first part.
-        const option = getRandomLetter(); 
-        const issueYear = issueDate.slice(-4);
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("NJ DD Error: Incorrect issue date!"); return; }
         const days = getNumberOfDaysFromBeginnigOfYear(issueDate);
-        a417_fields.document_discriminator.value = `${option}${issueYear}${days}0000${getRandomNumericString(4)}`;
+        a417_fields.document_discriminator.value = `${getRandomLetter()}${issueDate.slice(-4)}${days}0000${getRandomNumericString(4)}`;
     };
 
-    // NM
     const NM_calculate_documentNumber = () => { a417_fields.customer_id.value = "0" + getRandomNumericString(8); };
     const NM_calculate_ICN = () => {
         const docNum = a417_fields.customer_id.value;
-        if (!docNum || docNum.length !== 9) { showInputDataAlert("NM ICN Error: Doc Number (9 chars) is required."); return; }
+        if (!docNum || docNum.length !== 9) { showInputDataAlert("NM ICN Error: Doc Num (9 chars) is required."); return; }
         a417_fields.inventory_control.value = docNum + "01";
     };
     
-    /*
-$$  $$ $$$$$ $$  $$  $$$$  $$$$$   $$$$
-$$$ $$ $$    $$  $$ $$  $$ $$  $$ $$  $$
-$$ $$$ $$$$  $$  $$ $$$$$$ $$  $$ $$$$$$
-$$  $$ $$     $$$$  $$  $$ $$  $$ $$  $$
-$$  $$ $$$$$   $$   $$  $$ $$$$$  $$  $$
-*/
-       // NEVADA (NV) - UPDATED
-    const NV_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = "1" + getRandomNumericString(9);
-    };
-    const NV_calculate_ICN = () => {
-        a417_fields.inventory_control.value = "0019" + getRandomNumericString(7) + "01";
-    };
-    const NV_calculate_DD = () => {
-        a417_fields.document_discriminator.value = "0001" + getRandomNumericString(17);
-    };
+    const NV_calculate_documentNumber = () => { a417_fields.customer_id.value = "1" + getRandomNumericString(9); };
+    const NV_calculate_ICN = () => { a417_fields.inventory_control.value = "0019" + getRandomNumericString(7) + "01"; };
+    const NV_calculate_DD = () => { a417_fields.document_discriminator.value = "0001" + getRandomNumericString(17); };
 
-    
-   /* const NV_calculate_ICN() {
-    document.getElementById("inputICN").value = "0015" + getRandomNumericString(7) + "01";}*/
-    
-   /*
-$$  $$ $$$$$ $$   $    $$  $$  $$$$  $$$$$  $$  $$
-$$$ $$ $$    $$   $     $$$$  $$  $$ $$  $$ $$ $$
-$$ $$$ $$$$  $$ $ $      $$   $$  $$ $$$$$  $$$$
-$$  $$ $$    $$$$$$      $$   $$  $$ $$  $$ $$ $$
-$$  $$ $$$$$  $$ $$      $$    $$$$  $$  $$ $$  $$
-*/
-    // NEW YORK (NY) - UPDATED
-    const NY_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = "7" + getRandomNumericString(8);
-    };
-    const NY_calculate_DD = () => {
+    const NY_calculate_documentNumber = () => { a417_fields.customer_id.value = "7" + getRandomNumericString(8); };
+    const NY_calculate_DD = () => { 
         let s = "";
-        for (let i = 0; i < 8; i++) {
-            s += getRandomLetterAndDigit();
-        }
+        for (let i = 0; i < 8; i++) { s += getRandomLetterAndDigit(); }
         a417_fields.document_discriminator.value = s + "06";
     };
 
-/*
- $$$$  $$  $$ $$$$$$  $$$$
-$$  $$ $$  $$   $$   $$  $$
-$$  $$ $$$$$$   $$   $$  $$
-$$  $$ $$  $$   $$   $$  $$
- $$$$  $$  $$ $$$$$$  $$$$
+    const OH_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomLetter() + getRandomLetter() + getRandomNumericString(6); };
+    const OH_calculate_ICN = () => { a417_fields.inventory_control.value = getRandomLetter() + getRandomNumericString(8); };
+    const OH_calculate_DD = () => { a417_fields.document_discriminator.value = "0" + getRandomNumericString(7) + "0"; };
 
-*/  
-
-    // OHIO (OH) - UPDATED
-    const OH_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomLetter() + getRandomLetter() + getRandomNumericString(6);
-    };
-    const OH_calculate_ICN = () => {
-        a417_fields.inventory_control.value = getRandomLetter() + getRandomNumericString(8);
-    };
-    const OH_calculate_DD = () => {
-        a417_fields.document_discriminator.value = "0" + getRandomNumericString(7) + "0";
-    };
-  /*
- $$$$  $$  $$ $$      $$$$  $$  $$  $$$$  $$   $  $$$$
-$$  $$ $$ $$  $$     $$  $$ $$  $$ $$  $$ $$$ $$ $$  $$
-$$  $$ $$$$   $$     $$$$$$ $$$$$$ $$  $$ $$ $ $ $$$$$$
-$$  $$ $$ $$  $$     $$  $$ $$  $$ $$  $$ $$   $ $$  $$
- $$$$  $$  $$ $$$$$$ $$  $$ $$  $$  $$$$  $$   $ $$  $$
-*/
-       // OKLAHOMA (OK) - UPDATED
-    const OK_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomLetter() + "08" + getRandomNumericString(7);
-    };
+    const OK_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomLetter() + "08" + getRandomNumericString(7); };
     const OK_calculate_ICN = () => {
         const docNum = a417_fields.customer_id.value;
-        if (!docNum || docNum.length !== 10) {
-            showInputDataAlert("OK ICN Error: Document Number (must be 10 chars) is required!");
-            return;
-        }
-        a417_fields.inventory_control.value = 
-            docNum + 
-            "OK" + 
-            getRandomLetterAndDigit() + 
-            getRandomLetterAndDigit() + 
-            "SL01";
+        if (!docNum || docNum.length !== 10) { showInputDataAlert("OK ICN Error: Doc Num (10 chars) is required!"); return; }
+        a417_fields.inventory_control.value = docNum + "OK" + getRandomLetterAndDigit() + getRandomLetterAndDigit() + "SL01";
     };
     const OK_calculate_DD = () => {
-        const docNum = a417_fields.customer_id.value;
-        const issueDate = a417_fields.issue_date.value;
-        const birthDate = a417_fields.dob.value;
-
-        if (!docNum || docNum.length !== 10) {
-            showInputDataAlert("OK DD Error: A valid 10-char Document Number is required!");
-            return;
-        }
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("OK DD Error: An incorrect Issue Date is provided!");
-            return;
-        }
-        if (!birthDate || birthDate.length !== 8) {
-            showInputDataAlert("OK DD Error: An incorrect Birth Date is provided!");
-            return;
-        }
-
-        const dobFormatted = birthDate.slice(0, 4) + birthDate.slice(-2); // MMDDYY
-        const issueFormatted = issueDate.slice(0, 4) + issueDate.slice(-2); // MMDDYY
-        a417_fields.document_discriminator.value = `${docNum}${dobFormatted}${issueFormatted}R`;
+        const { customer_id, issue_date, dob } = a417_fields;
+        if (!customer_id.value || customer_id.value.length !== 10 || !issue_date.value || !dob.value) { showInputDataAlert("OK DD Error: Valid Doc Num, Issue Date, and DOB are required."); return; }
+        const dobFormatted = dob.value.slice(0, 4) + dob.value.slice(-2);
+        const issueFormatted = issue_date.value.slice(0, 4) + issue_date.value.slice(-2);
+        a417_fields.document_discriminator.value = `${customer_id.value}${dobFormatted}${issueFormatted}R`;
     };
-/*
- $$$$  $$$$$  $$$$$  $$$$   $$$$  $$  $$
-$$  $$ $$  $$ $$    $$     $$  $$ $$$ $$
-$$  $$ $$$$$  $$$$  $$ $$$ $$  $$ $$ $$$
-$$  $$ $$  $$ $$    $$  $$ $$  $$ $$  $$
- $$$$  $$  $$ $$$$$  $$$$   $$$$  $$  $$
-*/   
+
     const OR_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomNumericString(7); };
     const OR_calculate_ICN = () => { a417_fields.inventory_control.value = "AA" + getRandomNumericString(7); };
-   const OR_calculate_DD = () => {
-    a417_fields.document_discriminator.value = `200${getRandomNumericString(6)}`;
-};
+    const OR_calculate_DD = () => { a417_fields.document_discriminator.value = `200${getRandomNumericString(6)}`; };
 
-/*
-$$$$$  $$$$$ $$  $$ $$  $$  $$$$  $$  $$ $$     $$  $$  $$$$  $$  $$ $$$$$$  $$$$
-$$  $$ $$    $$$ $$ $$$ $$ $$      $$$$  $$     $$  $$ $$  $$ $$$ $$   $$   $$  $$
-$$$$$  $$$$  $$ $$$ $$ $$$  $$$$    $$   $$     $$  $$ $$$$$$ $$ $$$   $$   $$$$$$
-$$     $$    $$  $$ $$  $$     $$   $$   $$      $$$$  $$  $$ $$  $$   $$   $$  $$
-$$     $$$$$ $$  $$ $$  $$  $$$$    $$   $$$$$$   $$   $$  $$ $$  $$ $$$$$$ $$  $$
-*/
-
-// ============================== PENNSYLVANIA (PA) ============================ //
-    // PENNSYLVANIA (PA) - UPDATED
-    const PA_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomNumericString(8);
-    };
+    const PA_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomNumericString(8); };
     const PA_calculate_ICN = () => {
         const issueDate = a417_fields.issue_date.value;
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("PA ICN Error: Incorrect issue date!");
-            return;
-        }
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("PA ICN Error: Incorrect issue date!"); return; }
         a417_fields.inventory_control.value = "02500" + getRandomNumericString(6) + issueDate.slice(-2) + getRandomNumericString(3);
     };
     const PA_calculate_DD = () => {
         const issueDate = a417_fields.issue_date.value;
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("PA DD calculation error: Incorrect issue date!");
-            return;
-        }
-        a417_fields.document_discriminator.value = 
-            issueDate.slice(-2) + 
-            getNumberOfDaysFromBeginnigOfYear(issueDate) + 
-            getRandomNumericString(10) + 
-            "00000" + 
-            getRandomNumericString(5);
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("PA DD calculation error: Incorrect issue date!"); return; }
+        a417_fields.document_discriminator.value = issueDate.slice(-2) + getNumberOfDaysFromBeginnigOfYear(issueDate) + getRandomNumericString(10) + "00000" + getRandomNumericString(5);
     };
     
-/*
-$$$$$  $$  $$  $$$$  $$$$$  $$$$$    $$$$$$  $$$$  $$      $$$$  $$  $$ $$$$$
-$$  $$ $$  $$ $$  $$ $$  $$ $$         $$   $$     $$     $$  $$ $$$ $$ $$  $$
-$$$$$  $$$$$$ $$  $$ $$  $$ $$$$       $$    $$$$  $$     $$$$$$ $$ $$$ $$  $$
-$$  $$ $$  $$ $$  $$ $$  $$ $$         $$       $$ $$     $$  $$ $$  $$ $$  $$
-$$  $$ $$  $$  $$$$  $$$$$  $$$$$    $$$$$$  $$$$  $$$$$$ $$  $$ $$  $$ $$$$$
-*/
-        // RHODE ISLAND (RI) - UPDATED
-    const RI_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomNumericString(7);
-    };
+    const RI_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomNumericString(7); };
     const RI_calculate_ICN = () => {
         const docNum = a417_fields.customer_id.value;
-        if (!docNum || (docNum.length !== 7 && docNum.length !== 8)) {
-            showInputDataAlert("RI ICN Error: Document Number (must be 7 or 8 chars) is required!");
-            return;
-        }
+        if (!docNum || (docNum.length !== 7 && docNum.length !== 8)) { showInputDataAlert("RI ICN Error: Doc Num (7 or 8 chars) is required!"); return; }
         a417_fields.inventory_control.value = `O${docNum}RI${getRandomLetter()}${getRandomLetter()}TL01`;
     };
-    const RI_calculate_DD = () => {
-        // Using 2022 logic as default
-        a417_fields.document_discriminator.value = getRandomNumericString(7);
-    };
-    /*const RI_calculate_DD = () => {
-    const issueDate = document.getElementById("inputIssueDate").value.trim(); // MMDDYYYY
-    if (issueDate.length !== 8 || !/^\d{8}$/.test(issueDate)) {
-        showInputDataAlert("DD calculation error. Incorrect issue date!");
-        return;
-    }
+    const RI_calculate_DD = () => { a417_fields.document_discriminator.value = getRandomNumericString(7); };
 
-    const issueYear = parseInt(issueDate.slice(-4), 10);
-
-    if (issueYear > 2017) {
-        document.getElementById("inputDD").value = getRandomNumericString(6);
-        return;
-    }
-
-    const documentNumber = document.getElementById("inputDocumentNumber").value.trim();
-    if (documentNumber.length !== 7) {
-        showInputDataAlert("DD calculation error. Incorrect document number!");
-        return;
-    }
-
-    const dd =
-        documentNumber +
-        issueDate.slice(-4) +    // YYYY
-        issueDate.slice(0, 2) +  // MM
-        issueDate.slice(2, 4) +  // DD
-        getRandomNumericString(6);
-
-    document.getElementById("inputDD").value = dd;
-};
-*/
-
-/*
- $$$$   $$$$  $$  $$ $$$$$$ $$  $$     $$$$   $$$$  $$$$$   $$$$  $$     $$$$$$ $$  $$  $$$$
-$$     $$  $$ $$  $$   $$   $$  $$    $$  $$ $$  $$ $$  $$ $$  $$ $$       $$   $$$ $$ $$  $$
- $$$$  $$  $$ $$  $$   $$   $$$$$$    $$     $$$$$$ $$$$$  $$  $$ $$       $$   $$ $$$ $$$$$$
-    $$ $$  $$ $$  $$   $$   $$  $$    $$  $$ $$  $$ $$  $$ $$  $$ $$       $$   $$  $$ $$  $$
- $$$$   $$$$   $$$$    $$   $$  $$     $$$$  $$  $$ $$  $$  $$$$  $$$$$$ $$$$$$ $$  $$ $$  $$
-*/
     const SC_calculate_documentNumber = () => { a417_fields.customer_id.value = "10" + getRandomNumericString(7); };
     const SC_calculate_DD = () => {
-    const expiryDate = a417_fields.expiry_date.value;
-
-    // Kiểm tra dữ liệu đầu vào
-    if (!expiryDate || expiryDate.length !== 8) {
-        showInputDataAlert("SC DD Error: Incorrect expiry date (MMDDYYYY)!");
-        return;
-    }
-    
-    // Ghép chuỗi DD bằng template literal
-    const ddValue = 
-        `${getRandomNumericString(8)}` +
-        `${expiryDate.slice(0, 2)}` +  // MM
-        `${expiryDate.slice(-2)}` +    // YY
-        `${getNumberOfDaysFromBeginnigOfYear(expiryDate)}` +
-        `${getRandomNumericString(4)}`;
-
-    a417_fields.document_discriminator.value = ddValue;
-};
-
-    
-    
-/*
- $$$$   $$$$  $$  $$ $$$$$$ $$  $$     $$$$$   $$$$  $$  $$  $$$$  $$$$$$  $$$$
-$$     $$  $$ $$  $$   $$   $$  $$     $$  $$ $$  $$ $$ $$  $$  $$   $$   $$  $$
- $$$$  $$  $$ $$  $$   $$   $$$$$$     $$  $$ $$$$$$ $$$$   $$  $$   $$   $$$$$$
-    $$ $$  $$ $$  $$   $$   $$  $$     $$  $$ $$  $$ $$ $$  $$  $$   $$   $$  $$
-  $$$$  $$$$   $$$$    $$   $$  $$     $$$$$  $$  $$ $$  $$  $$$$    $$   $$  $$
-*/
+        const expiryDate = a417_fields.expiry_date.value;
+        if (!expiryDate || expiryDate.length !== 8) { showInputDataAlert("SC DD Error: Incorrect expiry date!"); return; }
+        const ddValue = `${getRandomNumericString(8)}${expiryDate.slice(0, 2)}${expiryDate.slice(-2)}${getNumberOfDaysFromBeginnigOfYear(expiryDate)}${getRandomNumericString(4)}`;
+        a417_fields.document_discriminator.value = ddValue;
+    };
+        
     const SD_calculate_documentNumber = () => { a417_fields.customer_id.value = "01" + getRandomNumericString(6); };
     const SD_calculate_ICN = () => { a417_fields.inventory_control.value = "042000" + getRandomNumericString(10); };
-const SD_calculate_DD = () => {
-    // Lấy giá trị từ các trường
-    const issueDate = a417_fields.issue_date.value;
-    const documentNumber = a417_fields.customer_id.value;
-
-    // Kiểm tra dữ liệu đầu vào
-    if (!issueDate || issueDate.length !== 8) {
-        showInputDataAlert("SD DD Error: Incorrect issue date (MMDDYYYY)!");
-        return;
-    }
-    if (!documentNumber || documentNumber.length !== 8) {
-        showInputDataAlert("SD DD Error: Incorrect document number (must be 8 digits)!");
-        return;
-    }
-
-    // Ghép chuỗi DD theo công thức
-    const ddValue = 
-        `${documentNumber}` +
-        `${issueDate.slice(-4)}${issueDate.slice(0, 2)}${issueDate.slice(2, 4)}` + // YYYYMMDD
-        `${getRandomNumericString(7)}`;
-
-    a417_fields.document_discriminator.value = ddValue;
-};
-
-/*
-$$$$$$ $$$$$ $$  $$ $$  $$ $$$$$  $$$$   $$$$  $$$$$ $$$$$
-  $$   $$    $$$ $$ $$$ $$ $$    $$     $$     $$    $$
-  $$   $$$$  $$ $$$ $$ $$$ $$$$   $$$$   $$$$  $$$$  $$$$
-  $$   $$    $$  $$ $$  $$ $$        $$     $$ $$    $$
-  $$   $$$$$ $$  $$ $$  $$ $$$$$  $$$$   $$$$  $$$$$ $$$$$
-*/
-
-// ========================== Nennessee (TN) =========================== //
-        // TENNESSEE (TN) - UPDATED
-    const TN_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = (Math.random() < 0.5 ? '0' : '1') + getRandomNumericString(8);
+    const SD_calculate_DD = () => {
+        const { issue_date, customer_id } = a417_fields;
+        if (!issue_date.value || issue_date.value.length !== 8 || !customer_id.value || customer_id.value.length !== 8) { showInputDataAlert("SD DD Error: Incorrect issue date or doc num."); return; }
+        const ddValue = `${customer_id.value}${issue_date.value.slice(-4)}${issue_date.value.slice(0, 2)}${issue_date.value.slice(2, 4)}${getRandomNumericString(7)}`;
+        a417_fields.document_discriminator.value = ddValue;
     };
+
+    const TN_calculate_documentNumber = () => { a417_fields.customer_id.value = (Math.random() < 0.5 ? '0' : '1') + getRandomNumericString(8); };
     const TN_calculate_ICN = () => {
         const issueDate = a417_fields.issue_date.value;
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("TN ICN Error: Incorrect issue date!");
-            return;
-        }
-        a417_fields.inventory_control.value = 
-            issueDate.slice(-2) + 
-            getNumberOfDaysFromBeginnigOfYear(issueDate) + 
-            getRandomNumericString(9) + "0101";
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("TN ICN Error: Incorrect issue date!"); return; }
+        a417_fields.inventory_control.value = issueDate.slice(-2) + getNumberOfDaysFromBeginnigOfYear(issueDate) + getRandomNumericString(9) + "0101";
     };
     const TN_calculate_DD = () => {
         const issueDate = a417_fields.issue_date.value;
-        if (!issueDate || issueDate.length !== 8) {
-            showInputDataAlert("TN DD Error: Incorrect issue date!");
-            return;
-        }
-        const formattedDate = issueDate.slice(-2) + issueDate.slice(0, 2) + issueDate.slice(2, 4); // YYMMDD
-        a417_fields.document_discriminator.value = 
-            getRandomNumericString(2) + "0" + formattedDate + getRandomNumericString(7);
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("TN DD Error: Incorrect issue date!"); return; }
+        const formattedDate = issueDate.slice(-2) + issueDate.slice(0, 2) + issueDate.slice(2, 4);
+        a417_fields.document_discriminator.value = getRandomNumericString(2) + "0" + formattedDate + getRandomNumericString(7);
     };
 
-  /*
-$$$$$$ $$$$$ $$  $$  $$$$   $$$$ 
-  $$   $$     $$$$  $$  $$ $$
-  $$   $$$$    $$   $$$$$$  $$$$
-  $$   $$     $$$$  $$  $$     $$
-  $$   $$$$$ $$  $$ $$  $$  $$$$
-*/
+    const TX_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomNumericString(8); };
+    const TX_calculate_ICN = () => { a417_fields.inventory_control.value = "10000" + getRandomNumericString(6); };
+    const TX_calculate_DD = () => { a417_fields.document_discriminator.value = getRandomNumericString(20); };
 
-// ======== TEXAS (TX) ======== //
-    // TEXAS (TX) - UPDATED
-    const TX_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomNumericString(8);
-    };
-    const TX_calculate_ICN = () => {
-        a417_fields.inventory_control.value = "10000" + getRandomNumericString(6);
-    };
-    const TX_calculate_DD = () => {
-        a417_fields.document_discriminator.value = getRandomNumericString(20);
-    };
-
-/*const TX_2016_calculate_ICN = () => {
-    const documentNumber = document.getElementById("inputDocumentNumber").value.trim();
-    if (documentNumber.length !== 8) {
-        showInputDataAlert("ICN calculation error. Incorrect document number!");
-        return;
-    }
-
-    const issueDate = document.getElementById("inputIssueDate").value.trim(); // MMDDYYYY
-    if (issueDate.length !== 8 || !/^\d{8}$/.test(issueDate)) {
-        showInputDataAlert("ICN calculation error. Incorrect issue date!");
-        return;
-    }
-
-    // Tạo đối tượng ngày từ chuỗi MMDDYYYY
-    const month = parseInt(issueDate.slice(0, 2), 10) - 1; // Tháng trong JS bắt đầu từ 0
-    const day = parseInt(issueDate.slice(2, 4), 10);
-    const year = parseInt(issueDate.slice(4), 10);
-
-    const issueDateObj = new Date(year, month, day);
-    issueDateObj.setDate(issueDateObj.getDate() + 1); // Cộng thêm 1 ngày
-
-    // Format lại thành YYYYMMDD
-    const formattedDate = issueDateObj.getFullYear().toString()
-        + String(issueDateObj.getMonth() + 1).padStart(2, '0')
-        + String(issueDateObj.getDate()).padStart(2, '0');
-
-    document.getElementById("inputICN").value = `${documentNumber}  ${formattedDate}`;
-};
-*/
-  /*
-$$  $$ $$$$$$  $$$$  $$  $$
-$$  $$   $$   $$  $$ $$  $$
-$$  $$   $$   $$$$$$ $$$$$$
-$$  $$   $$   $$  $$ $$  $$
- $$$$    $$   $$  $$ $$  $$
-*/
-        // UTAH (UT) - UPDATED
-    const UT_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = "1" + getRandomNumericString(8);
-    };
+    const UT_calculate_documentNumber = () => { a417_fields.customer_id.value = "1" + getRandomNumericString(8); };
     const UT_calculate_ICN = () => {
         const docNum = a417_fields.customer_id.value;
-        if (!docNum || docNum.length !== 9) {
-            showInputDataAlert("UT ICN Error: Document Number (must be 9 chars) is required!");
-            return;
-        }
+        if (!docNum || docNum.length !== 9) { showInputDataAlert("UT ICN Error: Doc Num (9 chars) is required!"); return; }
         a417_fields.inventory_control.value = `${docNum}UT${getRandomDigit()}${getRandomDigit()}SL01`;
     };
-    const UT_calculate_DD = () => {
-        a417_fields.document_discriminator.value = getRandomNumericString(8);
-    };
-    /*const UT_2016_calculate_REAL_ID = (alertEnabled = true) => {
-    console.log("Running REAL ID check...");
-
-    const issueDate = document.getElementById("inputIssueDate").value.trim(); // MMDDYYYY
-    if (issueDate.length !== 8 || !/^\d{8}$/.test(issueDate)) {
-        if (alertEnabled) {
-            showInputDataAlert("REAL ID calculation error. Incorrect issue date!");
-        }
-        return;
-    }
-
-    // Tạo đối tượng ngày từ MMDDYYYY
-    const year = parseInt(issueDate.slice(4), 10);
-    const month = parseInt(issueDate.slice(0, 2), 10) - 1;
-    const day = parseInt(issueDate.slice(2, 4), 10);
-    const issueDateObj = new Date(year, month, day);
-
-    const realIDCutoff = new Date(2019, 1, 1); // February 1, 2019
-
-    const realIDStatus = issueDateObj >= realIDCutoff ? "F" : "N"; // F = REAL ID, N = NOT
-    document.getElementById("inputIsRealID").value = realIDStatus;
-};
-*/
-
+    const UT_calculate_DD = () => { a417_fields.document_discriminator.value = getRandomNumericString(8); };
   
-/*
-$$  $$ $$$$$$ $$$$$   $$$$  $$$$$$ $$  $$ $$$$$$  $$$$
-$$  $$   $$   $$  $$ $$       $$   $$$ $$   $$   $$  $$
-$$  $$   $$   $$$$$  $$ $$$   $$   $$ $$$   $$   $$$$$$
- $$$$    $$   $$  $$ $$  $$   $$   $$  $$   $$   $$  $$
-  $$   $$$$$$ $$  $$  $$$$  $$$$$$ $$  $$ $$$$$$ $$  $$
-*/
+    const VA_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomLetter() + getRandomNumericString(8); };
+    const VA_calculate_ICN = () => { a417_fields.inventory_control.value = "0060101" + getRandomNumericString(9); };
+    const VA_calculate_DD = () => { a417_fields.document_discriminator.value = "0" + getRandomNumericString(8); };
 
-
-// ========================== VIRGINIA (VA) =========================== //
-    // VIRGINIA (VA) - UPDATED
-    const VA_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomLetter() + getRandomNumericString(8);
-    };
-    const VA_calculate_ICN = () => {
-        a417_fields.inventory_control.value = "0060101" + getRandomNumericString(9);
-    };
-    const VA_calculate_DD = () => {
-        a417_fields.document_discriminator.value = "0" + getRandomNumericString(8);
-    };
-
-
-/*
-$$  $$ $$$$$ $$$$$  $$   $  $$$$  $$  $$ $$$$$$
-$$  $$ $$    $$  $$ $$$ $$ $$  $$ $$$ $$   $$
-$$  $$ $$$$  $$$$$  $$ $ $ $$  $$ $$ $$$   $$
- $$$$  $$    $$  $$ $$   $ $$  $$ $$  $$   $$
-  $$   $$$$$ $$  $$ $$   $  $$$$  $$  $$   $$
-*/
     const VT_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomNumericString(8); };
-const VT_calculate_DD = () => {
-    // Lấy giá trị từ các trường
-    const documentNumber = a417_fields.customer_id.value;
-    const issueDate = a417_fields.issue_date.value;
-
-    // Kiểm tra dữ liệu đầu vào
-    if (!documentNumber || documentNumber.length !== 8) {
-        showInputDataAlert("VT DD Error: Incorrect document number (must be 8 digits)!");
-        return;
-    }
-    if (!issueDate || issueDate.length !== 8) {
-        showInputDataAlert("VT DD Error: Incorrect issue date (MMDDYYYY)!");
-        return;
-    }
-
-    // Ghép chuỗi DD theo công thức
-    const ddValue = 
-        `${issueDate.slice(0, 4)}` + // MMDD
-        `${issueDate.slice(-2)}` +   // YY
-        `${getRandomNumericString(4)}` +
-        `${documentNumber}`;
-
-    a417_fields.document_discriminator.value = ddValue;
-};
-/*
-$$   $  $$$$   $$$$  $$  $$ $$$$$$ $$  $$  $$$$  $$$$$$  $$$$  $$  $$
-$$   $ $$  $$ $$     $$  $$   $$   $$$ $$ $$       $$   $$  $$ $$$ $$
-$$ $ $ $$$$$$  $$$$  $$$$$$   $$   $$ $$$ $$ $$$   $$   $$  $$ $$ $$$
-$$$$$$ $$  $$     $$ $$  $$   $$   $$  $$ $$  $$   $$   $$  $$ $$  $$
- $$ $$ $$  $$  $$$$  $$  $$ $$$$$$ $$  $$  $$$$    $$    $$$$  $$  $$
-*/
-
-// ================== WASHINGTON (WA) ================== //
-            // WASHINGTON (WA) - UPDATED
-    const WA_calculate_documentNumber = () => {
-        let random_string = "";
-        for (let i = 0; i < 8; i++) {
-            random_string += getRandomLetterAndDigit();
-        }
-        a417_fields.customer_id.value = "WDL" + random_string + "B";
+    const VT_calculate_DD = () => {
+        const { customer_id, issue_date } = a417_fields;
+        if (!customer_id.value || customer_id.value.length !== 8 || !issue_date.value || issue_date.value.length !== 8) { showInputDataAlert("VT DD Error: Incorrect doc num or issue date."); return; }
+        a417_fields.document_discriminator.value = `${issue_date.value.slice(0, 4)}${issue_date.value.slice(-2)}${getRandomNumericString(4)}${customer_id.value}`;
     };
-   // === HÀM MỚI DÀNH CHO WASHINGTON ===
 
-const WA_calculate_audit_info = () => {
-    const issueDate = a417_fields.issue_date.value;
-    if (!issueDate || issueDate.length !== 8) {
-        // Cập nhật thông báo lỗi cho rõ ràng
-        showInputDataAlert("WA Audit Info calculation error: Incorrect issue date!");
-        return;
-    }
-    
-    // === THAY ĐỔI QUAN TRỌNG: GÁN KẾT QUẢ VÀO Ô "AUDIT INFO" ===
-    a417_fields.audit_info.value = 
-        getRandomLetter() +
-        issueDate.slice(0, 2) + 
-        issueDate.slice(2, 4) + 
-        issueDate.slice(-2) + 
-        "98" + 
-        getRandomNumericString(4);
-};
+    const WA_calculate_documentNumber = () => { a417_fields.customer_id.value = "WDL" + getRandomLetterAndDigit().repeat(8) + "B"; };
+    const WA_calculate_audit_info = () => {
+        const issueDate = a417_fields.issue_date.value;
+        if (!issueDate || issueDate.length !== 8) { showInputDataAlert("WA Audit Info error: Incorrect issue date!"); return; }
+        a417_fields.audit_info.value = getRandomLetter() + issueDate.slice(0, 2) + issueDate.slice(2, 4) + issueDate.slice(-2) + "98" + getRandomNumericString(4);
+    };
     const WA_calculate_DD = () => {
         const docNum = a417_fields.customer_id.value;
         let inventory_control = a417_fields.inventory_control.value;
-
-        if (!docNum || docNum.length !== 12) {
-            showInputDataAlert("WA DD Error: A valid 12-char Document Number is required! Please generate it first.");
-            return;
-        }
-        // If ICN is missing, generate it first.
-        if (!inventory_control || inventory_control.length !== 13) {
-             WA_calculate_ICN();
-             inventory_control = a417_fields.inventory_control.value;
-        }
+        if (!docNum || docNum.length !== 12) { showInputDataAlert("WA DD Error: A valid 12-char Doc Num is required."); return; }
+        if (!inventory_control || inventory_control.length !== 13) { generic_calculate_ICN(); inventory_control = a417_fields.inventory_control.value; }
         a417_fields.document_discriminator.value = docNum + inventory_control;
     };
-   /*
-$$   $ $$$$$$  $$$$   $$$$   $$$$  $$  $$  $$$$  $$$$$$ $$  $$
-$$   $   $$   $$     $$  $$ $$  $$ $$$ $$ $$       $$   $$$ $$
-$$ $ $   $$    $$$$  $$     $$  $$ $$ $$$  $$$$    $$   $$ $$$
-$$$$$$   $$       $$ $$  $$ $$  $$ $$  $$     $$   $$   $$  $$
- $$ $$ $$$$$$  $$$$   $$$$   $$$$  $$  $$  $$$$  $$$$$$ $$  $$
-*/
-
-    // WISCONSIN (WI) - UPDATED
-           // WISCONSIN (WI) - FINAL STABLE VERSION
+   
     const WI_calculate_documentNumber = () => {
         const lastName = a417_fields.family_name.value;
-        if (!lastName) {
-            showInputDataAlert("WI Doc Number error: Last Name is required!");
-            return;
-        }
-        // Format: LNNN-NNNN-NNNN-NN (1 Letter, 13 numbers, with dashes)
-        a417_fields.customer_id.value = 
-            lastName.charAt(0).toUpperCase() + 
-            getRandomNumericString(3) + "-" +
-            getRandomNumericString(4) + "-" +
-            getRandomNumericString(4) + "-" +
-            getRandomNumericString(2);
+        if (!lastName) { showInputDataAlert("WI Doc Num error: Last Name is required!"); return; }
+        a417_fields.customer_id.value = lastName.charAt(0).toUpperCase() + getRandomNumericString(3) + "-" + getRandomNumericString(4) + "-" + getRandomNumericString(4) + "-" + getRandomNumericString(2);
     };
-    const WI_calculate_ICN = () => {
-        a417_fields.inventory_control.value = "0130100" + getRandomNumericString(9);
-    };
+    const WI_calculate_ICN = () => { a417_fields.inventory_control.value = "0130100" + getRandomNumericString(9); };
     const WI_calculate_DD = () => {
-        const lastName = a417_fields.family_name.value;
-        const issueDate = a417_fields.issue_date.value;
-        if (!lastName || !issueDate) {
-            showInputDataAlert("WI DD Error: Last Name and Issue Date are required!");
-            return;
-        }
-        const formattedDate = issueDate.slice(-4) + issueDate.slice(0, 2) + issueDate.slice(2, 4); // YYYYMMDD
-        const randomSample = Math.random() < 0.5 ? "10" : "15";
-
-        a417_fields.document_discriminator.value = 
-            `OT${lastName.charAt(0).toUpperCase()}${getRandomLetter()}${getRandomLetter()}${formattedDate}${randomSample}${getRandomNumericString(6)}`;
+        const { family_name, issue_date } = a417_fields;
+        if (!family_name.value || !issue_date.value) { showInputDataAlert("WI DD Error: Last Name and Issue Date are required!"); return; }
+        const formattedDate = issue_date.value.slice(-4) + issue_date.value.slice(0, 2) + issue_date.value.slice(2, 4);
+        a417_fields.document_discriminator.value = `OT${family_name.value.charAt(0).toUpperCase()}${getRandomLetter()}${getRandomLetter()}${formattedDate}${Math.random() < 0.5 ? "10" : "15"}${getRandomNumericString(6)}`;
     };
-  /*
-##   # #####  ####  ######    ##  ## ###### #####   ####  ###### ##  ## ######  ####
-##   # ##    ##       ##      ##  ##   ##   ##  ## ##       ##   ### ##   ##   ##  ##
-## # # ####   ####    ##      ##  ##   ##   #####  ## ###   ##   ## ###   ##   ######
-###### ##        ##   ##       ####    ##   ##  ## ##  ##   ##   ##  ##   ##   ##  ##
- ## ## #####  ####    ##        ##   ###### ##  ##  ####  ###### ##  ## ###### ##  ##
-*/
 
-// ========================== WEST VIRGINIA (WV) =========================== //
-
-        // WEST VIRGINIA (WV) - UPDATED
-    const WV_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = getRandomLetter() + getRandomNumericString(6);
-    };
+    const WV_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomLetter() + getRandomNumericString(6); };
     const WV_calculate_ICN = () => {
         const docNum = a417_fields.customer_id.value;
-        if (!docNum || docNum.length !== 7) {
-            showInputDataAlert("WV ICN Error: Document Number (must be 7 chars) is required!");
-            return;
-        }
-        a417_fields.inventory_control.value = 
-            docNum + "WV" + 
-            getRandomLetter() + 
-            getRandomLetter() + 
-            getRandomLetter() + 
-            getRandomLetter() + "01";
+        if (!docNum || docNum.length !== 7) { showInputDataAlert("WV ICN Error: Doc Num (7 chars) is required!"); return; }
+        a417_fields.inventory_control.value = docNum + "WV" + getRandomLetter() + getRandomLetter() + getRandomLetter() + getRandomLetter() + "01";
     };
     const WV_calculate_DD = () => {
-        const birthDate = a417_fields.dob.value;
-        const expiryDate = a417_fields.expiry_date.value;
-        const lastName = a417_fields.family_name.value;
-        const firstName = a417_fields.first_name.value;
-
-        if (!birthDate || birthDate.length !== 8) { showInputDataAlert("WV DD Error: A valid Birth Date is required."); return; }
-        if (!expiryDate || expiryDate.length !== 8) { showInputDataAlert("WV DD Error: A valid Expiry Date is required."); return; }
-        if (!lastName) { showInputDataAlert("WV DD Error: Last Name is required."); return; }
-        if (!firstName) { showInputDataAlert("WV DD Error: First Name is required."); return; }
-
-        a417_fields.document_discriminator.value = 
-            birthDate.slice(0, 4) + 
-            birthDate.slice(-2) + 
-            lastName.charAt(0).toUpperCase() + 
-            firstName.charAt(0).toUpperCase() + 
-            expiryDate.slice(-2) + 
-            expiryDate.slice(0, 2);
+        const { dob, expiry_date, family_name, first_name } = a417_fields;
+        if (!dob.value || !expiry_date.value || !family_name.value || !first_name.value) { showInputDataAlert("WV DD Error: All required fields must be filled."); return; }
+        a417_fields.document_discriminator.value = dob.value.slice(0, 4) + dob.value.slice(-2) + family_name.value.charAt(0).toUpperCase() + first_name.value.charAt(0).toUpperCase() + expiry_date.value.slice(-2) + expiry_date.value.slice(0, 2);
     };
-    /*
-$$   $ $$  $$  $$$$  $$   $ $$$$$$ $$  $$  $$$$
-$$   $  $$$$  $$  $$ $$$ $$   $$   $$$ $$ $$
-$$ $ $   $$   $$  $$ $$ $ $   $$   $$ $$$ $$ $$$
-$$$$$$   $$   $$  $$ $$   $   $$   $$  $$ $$  $$
- $$ $$   $$    $$$$  $$   $ $$$$$$ $$  $$  $$$$
-*/
 
-       // WYOMING (WY) - UPDATED
-    const WY_calculate_documentNumber = () => {
-        a417_fields.customer_id.value = "11" + getRandomNumericString(7);
-    };
+    const WY_calculate_documentNumber = () => { a417_fields.customer_id.value = "11" + getRandomNumericString(7); };
     const WY_calculate_ICN_and_DD = () => {
-        // This single function generates a value and sets it for both ICN and DD
         const value = "100003" + getRandomNumericString(3) + "7";
         a417_fields.inventory_control.value = value;
         a417_fields.document_discriminator.value = value;
     };
-    /*
-$$   $  $$$$   $$$$  $$  $$ $$$$$$ $$  $$  $$$$  $$$$$$  $$$$  $$  $$      $$$$$   $$$$
-$$   $ $$  $$ $$     $$  $$   $$   $$$ $$ $$       $$   $$  $$ $$$ $$      $$  $$ $$  $$
-$$ $ $ $$$$$$  $$$$  $$$$$$   $$   $$ $$$ $$ $$$   $$   $$  $$ $$ $$$      $$  $$ $$
-$$$$$$ $$  $$     $$ $$  $$   $$   $$  $$ $$  $$   $$   $$  $$ $$  $$      $$  $$ $$  $$
- $$ $$ $$  $$  $$$$  $$  $$ $$$$$$ $$  $$  $$$$    $$    $$$$  $$  $$      $$$$$   $$$$
-*/
-// ================= DISTRICT OF COLUMBIA (DC) - UPDATED ================= //
-const DC_calculate_documentNumber = () => {
-    a417_fields.customer_id.value = getRandomNumericString(7);
-};
 
-const DC_calculate_audit_info = () => {
-    const issueDateStr = a417_fields.issue_date.value;
+    const DC_calculate_documentNumber = () => { a417_fields.customer_id.value = getRandomNumericString(7); };
+    const DC_calculate_audit_info = () => {
+        const issueDateStr = a417_fields.issue_date.value;
+        if (!issueDateStr || issueDateStr.length !== 8) { showInputDataAlert("DC Audit Info Error: Incorrect issue date!"); return; }
+        const issueDateObj = new Date(parseInt(issueDateStr.slice(-4)), parseInt(issueDateStr.slice(0, 2)) - 1, parseInt(issueDateStr.slice(2, 4)));
+        issueDateObj.setDate(issueDateObj.getDate() + 5);
+        const auditValue = `${getFormattedDate_MMDDYYYY(issueDateObj)}_${getRandomNumericString(6)}_${getRandomDigit()}_${getRandomNumericString(3)}`;
+        a417_fields.audit_info.value = auditValue;
+    };
+    const DC_calculate_DD = () => { a417_fields.document_discriminator.value = getRandomNumericString(8); };
 
-    // Kiểm tra dữ liệu đầu vào
-    if (!issueDateStr || issueDateStr.length !== 8) {
-        showInputDataAlert("DC Audit Info Error: Incorrect issue date (MMDDYYYY)!");
-        return;
-    }
-
-    // Phân tích ngày tháng và cộng thêm 5 ngày
-    const year = parseInt(issueDateStr.slice(-4));
-    const month = parseInt(issueDateStr.slice(0, 2)) - 1; // Tháng trong JS bắt đầu từ 0
-    const day = parseInt(issueDateStr.slice(2, 4));
-    
-    const issueDateObj = new Date(year, month, day);
-    issueDateObj.setDate(issueDateObj.getDate() + 5);
-
-    // Định dạng lại ngày mới thành chuỗi MMDDYYYY
-    // Sử dụng hàm getFormattedDate_MMDDYYYY đã có sẵn để đảm bảo tính nhất quán
-    const formattedDate = getFormattedDate_MMDDYYYY(issueDateObj);
-
-    // Tạo chuỗi Audit Info cuối cùng
-    const auditValue = `${formattedDate}_${getRandomNumericString(6)}_${getRandomDigit()}_${getRandomNumericString(3)}`;
-    
-    a417_fields.audit_info.value = auditValue;
-};
-
-const DC_calculate_DD = () => {
-    a417_fields.document_discriminator.value = getRandomNumericString(8);
-};
-
-    //--- END OF STATE-SPECIFIC GENERATORS ---
-    
-        const fieldGenerators = {
+    // --- Object chứa tất cả các hàm generator để dễ dàng truy cập ---
+    const fieldGenerators = {
         generic: {
-            customer_id: generic_calculate_documentNumber,
-            document_discriminator: generic_calculate_DD,
-            inventory_control: generic_calculate_ICN,
-            family_name: randomize_family_name,
-            first_name: randomize_first_name,
-            dob: randomize_dob,
-            issue_date: randomize_issue_date,
-            expiry_date: randomize_expiry_date,
+            customer_id: generic_calculate_documentNumber, document_discriminator: generic_calculate_DD, inventory_control: generic_calculate_ICN,
+            family_name: randomize_family_name, first_name: randomize_first_name, dob: randomize_dob,
+            issue_date: randomize_issue_date, expiry_date: randomize_expiry_date,
         },
         specific: {
             'DC': { customer_id: DC_calculate_documentNumber, audit_info: DC_calculate_audit_info, document_discriminator: DC_calculate_DD },
@@ -2293,8 +948,8 @@ const DC_calculate_DD = () => {
             'IA': {customer_id: IA_calculate_documentNumber, inventory_control: IA_calculate_ICN, document_discriminator: IA_calculate_DD},            
             'ID': { customer_id: ID_calculate_documentNumber, inventory_control: ID_calculate_ICN, document_discriminator: ID_calculate_DD },
             'IL': { customer_id: IL_calculate_documentNumber, inventory_control: IL_calculate_ICN, document_discriminator: IL_calculate_DD },
-'IN': { customer_id: IN_calculate_documentNumber, inventory_control: IN_calculate_ICN, document_discriminator: IN_calculate_DD, issuing_office: IN_calculate_issuing_office },            
-'KS': { customer_id: KS_calculate_documentNumber, inventory_control: KS_calculate_ICN, document_discriminator: KS_calculate_DD },            
+            'IN': { customer_id: IN_calculate_documentNumber, inventory_control: IN_calculate_ICN, document_discriminator: IN_calculate_DD, issuing_office: IN_calculate_issuing_office },            
+            'KS': { customer_id: KS_calculate_documentNumber, inventory_control: KS_calculate_ICN, document_discriminator: KS_calculate_DD },            
             'KY': { customer_id: KY_calculate_documentNumber, inventory_control: KY_calculate_ICN, document_discriminator: KY_calculate_DD },
             'LA': { customer_id: LA_calculate_documentNumber, inventory_control: LA_calculate_ICN, audit_info: LA_calculate_audit_info, issuing_office: LA_calculate_issuing_office }, 
             'MD': { customer_id: MD_calculate_documentNumber, inventory_control: MD_calculate_ICN, document_discriminator: MD_calculate_DD },
@@ -2317,22 +972,27 @@ const DC_calculate_DD = () => {
             'OR': { customer_id: OR_calculate_documentNumber, inventory_control: OR_calculate_ICN, document_discriminator: OR_calculate_DD },            
             'PA': { customer_id: PA_calculate_documentNumber, inventory_control: PA_calculate_ICN, document_discriminator: PA_calculate_DD },
             'RI': { customer_id: RI_calculate_documentNumber, inventory_control: RI_calculate_ICN, document_discriminator: RI_calculate_DD },
-            'SC': {  customer_id: SC_calculate_documentNumber, document_discriminator: SC_calculate_DD },            
+            'SC': { customer_id: SC_calculate_documentNumber, document_discriminator: SC_calculate_DD },            
             'SD': { customer_id: SD_calculate_documentNumber, inventory_control: SD_calculate_ICN, document_discriminator: SD_calculate_DD }, 
-           'TN': { customer_id: TN_calculate_documentNumber, inventory_control: TN_calculate_ICN, document_discriminator: TN_calculate_DD },
-            'TX': { customer_id: TX_calculate_documentNumber, inventory_control: TX_calculate_ICN },
+            'TN': { customer_id: TN_calculate_documentNumber, inventory_control: TN_calculate_ICN, document_discriminator: TN_calculate_DD },
+            'TX': { customer_id: TX_calculate_documentNumber, inventory_control: TX_calculate_ICN, document_discriminator: TX_calculate_DD },
             'UT': { customer_id: UT_calculate_documentNumber, inventory_control: UT_calculate_ICN, document_discriminator: UT_calculate_DD },
             'VA': { customer_id: VA_calculate_documentNumber, inventory_control: VA_calculate_ICN, document_discriminator: VA_calculate_DD },
             'VT': { customer_id: VT_calculate_documentNumber, document_discriminator: VT_calculate_DD },
             'WA': { customer_id: WA_calculate_documentNumber, audit_info: WA_calculate_audit_info, document_discriminator: WA_calculate_DD },
             'WI': { customer_id: WI_calculate_documentNumber, inventory_control: WI_calculate_ICN, document_discriminator: WI_calculate_DD },
             'WV': { customer_id: WV_calculate_documentNumber, inventory_control: WV_calculate_ICN, document_discriminator: WV_calculate_DD },
-            'WY': { customer_id: WY_calculate_documentNumber, inventory_control: WY_calculate_ICN_and_DD, document_discriminator: WY_calculate_ICN_and_DD 
-}
-        
+            'WY': { customer_id: WY_calculate_documentNumber, inventory_control: WY_calculate_ICN_and_DD, document_discriminator: WY_calculate_ICN_and_DD }
         }
     };
-    
+
+    // =======================================================================
+    // === SECTION: CORE APPLICATION LOGIC                                 ===
+    // =======================================================================
+
+    /**
+     * Tạo dữ liệu ngẫu nhiên cho tất cả các trường dựa trên bang đã chọn.
+     */
     function generateAllRandomData() {
         const stateSelector = document.getElementById('a417-state-selector-for-random');
         const selectedState = stateSelector.value.toUpperCase().trim();
@@ -2343,7 +1003,6 @@ const DC_calculate_DD = () => {
         }
         a417_fields.state.value = selectedState;
         
-        // Cập nhật IIN dựa trên tiểu bang được chọn
         const iin = STATE_IIN_MAP[selectedState] || '636000';
         a417_fields.iin.value = iin;
 
@@ -2353,7 +1012,6 @@ const DC_calculate_DD = () => {
         fieldGenerators.generic.dob();
         fieldGenerators.generic.issue_date();
 
-        // Gọi hàm tạo ngày hết hạn cụ thể của tiểu bang nếu có, nếu không thì dùng hàm chung
         const stateSpecificExpiryGenerator = fieldGenerators.specific[selectedState]?.expiry_date;
         if (stateSpecificExpiryGenerator) {
             stateSpecificExpiryGenerator();
@@ -2395,54 +1053,56 @@ const DC_calculate_DD = () => {
         const currentCityData = cityData[selectedState] || { cities: ["Anytown"], zips: [12345]};
         const randomIndex = Math.floor(Math.random() * currentCityData.cities.length);
         
-        // === BẮT ĐẦU SỬA ĐỔI LOGIC ĐỊA CHỈ ===
-        // Tạo dữ liệu ngẫu nhiên cho từng trường địa chỉ riêng biệt
-        a417_fields.street1.value = `${Math.floor(Math.random() * 9000) + 100} ${["Main St", "Oak Ave", "Pine Rd"][Math.floor(Math.random()*3)]}`;
+        a417_fields.street1.value = `${getRandomInt(100, 9999)} ${["Main St", "Oak Ave", "Pine Rd"][Math.floor(Math.random()*3)]}`;
         a417_fields.city.value = currentCityData.cities[randomIndex];
-        a417_fields.postal_code.value = String(currentCityData.zips[randomIndex] + Math.floor(Math.random() * 50)).padStart(5,'0');
-        a417_fields.street2.value = ''; // Xóa trống trường street2
-        // === KẾT THÚC SỬA ĐỔI ===
+        a417_fields.postal_code.value = String(currentCityData.zips[randomIndex] + getRandomInt(0, 50)).padStart(5,'0');
+        a417_fields.street2.value = ''; 
         
-        a417_fields.height.value = `0${(Math.floor(Math.random() * 16) + 60)}`;
-        a417_fields.weight_pounds.value = (Math.floor(Math.random() * 100) + 120).toString();
+        a417_fields.height.value = `0${getRandomInt(60, 75)}`;
+        a417_fields.weight_pounds.value = getRandomInt(120, 220).toString();
         
-        // Thứ tự gọi các hàm generator rất quan trọng, đặc biệt khi các hàm sau phụ thuộc vào kết quả của các hàm trước.
         const generationOrder = [
-            'dob', // Cần cho một số tính toán DL
-            'family_name', 'first_name', // Cần cho một số tính toán DL
-            'customer_id', // Cần cho ICN/DD
-            'issue_date', 'expiry_date', // Cần cho ICN/DD
-            'inventory_control', 
-            'document_discriminator',
-            'audit_info', // Thêm các trường jurisdiction-specific
-            'issuing_office'
+            'dob', 'family_name', 'first_name', 'customer_id', 'issue_date', 'expiry_date', 
+            'inventory_control', 'document_discriminator', 'audit_info', 'issuing_office'
         ];
 
         generationOrder.forEach(fieldName => {
-            // Kiểm tra xem có trường này trong form không
             if (a417_fields[fieldName]) {
-                const generator = (fieldGenerators.specific[selectedState] && fieldGenerators.specific[selectedState][fieldName]) 
-                                  || fieldGenerators.generic[fieldName];
+                const generator = (fieldGenerators.specific[selectedState]?.[fieldName]) || fieldGenerators.generic[fieldName];
                 if (generator) {
                     try {
                         generator();
                     } catch (e) {
-                        // Bỏ qua lỗi nếu một trường phụ thuộc không có sẵn, vì vòng lặp sẽ xử lý nó
+                        console.warn(`Generator for ${fieldName} failed:`, e);
                     }
                 }
             }
         });
         
+        // Xóa và điền dữ liệu ZC
+        Object.keys(a417_fields).filter(k => k.startsWith('zc')).forEach(k => a417_fields[k].value = '');
+        if (['CA', 'FL'].includes(selectedState)) {
+             a417_fields.zca_eye_color.value = a417_fields.eye_color.value;
+             a417_fields.zcb_hair_color.value = a417_fields.hair_color.value;
+             a417_fields.zcc_field.value = 'EXAMPLE-C';
+             a417_fields.zcd_field.value = 'EXAMPLE-D';
+        }
+        
         alert(`Đã tạo dữ liệu ngẫu nhiên cho tiểu bang: ${selectedState}`);
     }
 
-    // --- CORE APPLICATION FUNCTIONS ---
+    /**
+     * Lấy dữ liệu hiện tại từ các ô input trên form.
+     */
     function getCurrentData() {
         const data = {};
         for(const name in a417_fields) { data[name] = a417_fields[name].value; }
         return data;
     }
 
+    /**
+     * Xử lý việc nhập dữ liệu từ file Excel.
+     */
     function importFromExcel(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -2458,59 +1118,43 @@ const DC_calculate_DD = () => {
                 a417_all_records = [];
                 a417_barcode_images = {};
                 
-                // Mở rộng excelMapping để bao gồm tất cả các trường có thể nhập
                 const excelMapping = {
-                    // Identification
                     'Family Name': 'family_name', 'First Name': 'first_name', 'Middle Name(s)': 'middle_name',
                     'Name Suffix': 'name_suffix', 'Date of Birth': 'dob', 'Expiration Date': 'expiry_date', 
                     'Issue Date': 'issue_date', 'ID Number': 'customer_id', 'Document Discriminator': 'document_discriminator',
                     'Country': 'country', 'Family Name Truncation': 'family_name_trunc', 'First Name Truncation': 'first_name_trunc',
-                    'Middle Name Truncation': 'middle_name_trunc',
-                    // Address
-                    'Street 1': 'street1', 'Street 2': 'street2', 'City': 'city', 'State': 'state', 'Postal Code': 'postal_code',
-                    // Physical Description
-                    'Sex': 'sex', 'Eye Color': 'eye_color', 'Height': 'height', 'Hair Color': 'hair_color', 
-                    'Race/Ethnicity': 'race', 'Weight (lbs)': 'weight_pounds', 'Weight (kg)': 'weight_kg', 'Weight Range': 'weight_range',
-                    // Document Details
-                    'Vehicle Class': 'vehicle_class', 'Restrictions': 'restrictions', 'Endorsements': 'endorsements',
-                    'Card Revision Date': 'card_revision_date', 'Organ Donor': 'organ_donor', 'Veteran': 'veteran',
-                    'Compliance Type': 'compliance_type', 'Limited Duration': 'limited_duration', 'HAZMAT Expiry': 'hazmat_expiry',
-                    'Under 18 Until': 'under_18', 'Under 19 Until': 'under_19', 'Under 21 Until': 'under_21',
-                    'Standard Vehicle Classification': 'std_vehicle_class',
-                    'Standard Restriction': 'std_restriction',
-                    'Standard Endorsement': 'std_endorsement',
-                    // Jurisdiction-Specific
-                    'Inventory control': 'inventory_control', 'Audit Information': 'audit_info', 'Place of Birth': 'place_of_birth',
-                    'Issuing Office': 'issuing_office',
-                    // Optional
-                    'Alias Family Name': 'alias_family', 'Alias Given Name': 'alias_given', 'Alias Suffix Name': 'alias_suffix',
-                    // Header
-                     'IIN': 'iin', 'AAMVA Version': 'aamva_version', 'Jurisdiction Version': 'jurisdiction_version',
-                    // Filename
-                    'Filename': 'filename'
+                    'Middle Name Truncation': 'middle_name_trunc', 'Street 1': 'street1', 'Street 2': 'street2', 'City': 'city', 
+                    'State': 'state', 'Postal Code': 'postal_code', 'Sex': 'sex', 'Eye Color': 'eye_color', 'Height': 'height', 
+                    'Hair Color': 'hair_color', 'Race/Ethnicity': 'race', 'Weight (lbs)': 'weight_pounds', 'Weight (kg)': 'weight_kg', 
+                    'Weight Range': 'weight_range', 'Vehicle Class': 'vehicle_class', 'Restrictions': 'restrictions', 'Endorsements': 'endorsements',
+                    'Card Revision Date': 'card_revision_date', 'Organ Donor': 'organ_donor', 'Veteran': 'veteran', 'Compliance Type': 'compliance_type', 
+                    'Limited Duration': 'limited_duration', 'HAZMAT Expiry': 'hazmat_expiry', 'Under 18 Until': 'under_18', 'Under 19 Until': 'under_19', 
+                    'Under 21 Until': 'under_21', 'Standard Vehicle Classification': 'std_vehicle_class', 'Standard Restriction': 'std_restriction', 
+                    'Standard Endorsement': 'std_endorsement', 'Inventory control': 'inventory_control', 'Audit Information': 'audit_info', 
+                    'Place of Birth': 'place_of_birth', 'Issuing Office': 'issuing_office', 'Jurisdiction Eye Color (ZCA)': 'zca_eye_color',
+                    'Jurisdiction Hair Color (ZCB)': 'zcb_hair_color', 'Jurisdiction Field C (ZCC)': 'zcc_field', 'Jurisdiction Field D (ZCD)': 'zcd_field',
+                    'Jurisdiction Field E (ZCE)': 'zce_field', 'Jurisdiction Field F (ZCF)': 'zcf_field', 'Alias Family Name': 'alias_family', 
+                    'Alias Given Name': 'alias_given', 'Alias Suffix Name': 'alias_suffix', 'IIN': 'iin', 'AAMVA Version': 'aamva_version', 
+                    'Jurisdiction Version': 'jurisdiction_version', 'Filename': 'filename'
                 };
 
-
                 jsonData.forEach(row => {
-                    let recordData = getCurrentData(); // Bắt đầu với dữ liệu mặc định/hiện tại
+                    let recordData = getCurrentData();
                      for (const excelHeader in excelMapping) {
                         const fieldName = excelMapping[excelHeader];
                         let value = row[excelHeader] !== undefined ? String(row[excelHeader]).trim() : undefined;
                         
                         if (value !== undefined) {
                             if (['Date of Birth', 'Expiration Date', 'Issue Date', 'Card Revision Date', 'HAZMAT Expiry', 'Under 18 Until', 'Under 19 Until', 'Under 21 Until'].includes(excelHeader)) {
-                                // Xử lý các trường ngày tháng, hỗ trợ cả định dạng Excel và MMDDYYYY
-                                if (value && !/^\d{8}$/.test(value)) { // Nếu không phải là MMDDYYYY
-                                    const dt = new Date(Math.round((value - 25569) * 86400 * 1000)); // Chuyển đổi số serial của Excel
-                                    if (!isNaN(dt)) {
-                                        value = getFormattedDate_MMDDYYYY(dt);
-                                    }
+                                if (value && !/^\d{8}$/.test(value)) { 
+                                    const dt = new Date(Math.round((value - 25569) * 86400 * 1000));
+                                    if (!isNaN(dt)) { value = getFormattedDate_MMDDYYYY(dt); }
                                 }
                             } else if(fieldName === 'sex') {
                                 const val_lower = value.toLowerCase();
                                 if (['male', 'm', '1', 'nam'].includes(val_lower)) value = "1";
                                 else if (['female', 'f', '2', 'nữ'].includes(val_lower)) value = "2";
-                                else value = "9"; // Mặc định là không rõ
+                                else value = "9";
                             }
                             recordData[fieldName] = value;
                         }
@@ -2527,254 +1171,155 @@ const DC_calculate_DD = () => {
         reader.readAsArrayBuffer(file);
     }
     
-    function calculateDlSubfileLength(record_data) {
-        const field_to_id = {
-            'customer_id': 'DAQ', 
-            'family_name_trunc': 'DDE', 
-            'first_name': 'DAC', 
-            'first_name_trunc': 'DDF', 'middle_name': 'DAD', 
-            'middle_name_trunc': 'DDG',
-            'name_suffix': 'DCU', 'dob': 'DBB', 
-            'expiry_date': 'DBA', 'issue_date': 'DBD', 'family_name': 'DCS',
-             'document_discriminator': 'DCF',
-            'country': 'DCG', 'street1': 'DAG', 'street2': 'DAH', 'city': 'DAI',
-             'state': 'DAJ', 'postal_code': 'DAK', 'sex': 'DBC', 'eye_color': 'DAY',
-            'height': 'DAU', 'hair_color': 'DAZ', 'race': 'DCL', 'weight_pounds': 'DAW',
-             'weight_kg': 'DAX', 'weight_range': 'DCE',
-            'vehicle_class': 'DCA', 
-            'restrictions': 'DCB', 'endorsements': 'DCD',
-             'std_vehicle_class': 'DCM', 
-             'std_restriction': 'DCO',
-            'std_endorsement': 'DCN', 'compliance_type': 'DDA', 'card_revision_date': 'DDB', 
-            'limited_duration': 'DDD', 'hazmat_expiry': 'DDC',
-            'under_18': 'DDH', 'under_19': 'DDI', 'under_21': 'DDJ', 'organ_donor': 'DDK', 'veteran': 'DDL',
-            'alias_family': 'DBN', 'alias_given': 'DBG', 'alias_suffix': 'DBS', 'place_of_birth': 'DCI',
-            'audit_info': 'DCJ', 'inventory_control': 'DCK',
-            'issuing_office': 'IOE'
+    /**
+     * Hàm quan trọng nhất: Tạo chuỗi dữ liệu thô tuân thủ tiêu chuẩn AAMVA.
+     * Phiên bản này đã được sửa lỗi để đảm bảo cấu trúc header, offset, và body chính xác.
+     * @param {object} record_data - Dữ liệu từ form hoặc file Excel.
+     * @returns {object} - Chứa chuỗi dữ liệu cuối cùng và các thông tin header.
+     */
+    function generateAamvaDataString(record_data) {
+        // STEP 1: Định nghĩa các ký tự phân tách đặc biệt theo tiêu chuẩn AAMVA.
+        const LF = '\n'; // Line Feed (U+000A), dùng làm Field Separator (phân tách trường).
+        const CR = '\r'; // Carriage Return (U+000D), dùng làm Segment Terminator (kết thúc subfile).
+        const RS = String.fromCharCode(30); // Record Separator (U+001E), phân tách header và record.
+        
+        // STEP 2: Định nghĩa cấu trúc của các subfile (DL, ZC, ...).
+        const subfileDefinitions = {
+            "DL": [
+                ['DAQ', 'customer_id'], ['DCS', 'family_name'], ['DAC', 'first_name'], ['DAD', 'middle_name'],
+                ['DBD', 'issue_date'], ['DBB', 'dob'], ['DBA', 'expiry_date'], ['DBC', 'sex'],
+                ['DAY', 'eye_color'], ['DAU', 'height'], ['DAZ', 'hair_color'], ['DAG', 'street1'], 
+                ['DAH', 'street2'], ['DAI', 'city'], ['DAJ', 'state'], ['DAK', 'postal_code'], 
+                ['DCG', 'country'], ['DDE', 'family_name_trunc'], ['DDF', 'first_name_trunc'], 
+                ['DDG', 'middle_name_trunc'], ['DCF', 'document_discriminator'], ['DCK', 'inventory_control'],
+                ['DDA', 'compliance_type'], ['DDB', 'card_revision_date'], ['DCB', 'restrictions'], 
+                ['DCD', 'endorsements'], ['DCA', 'vehicle_class'], ['DCM', 'std_vehicle_class'],
+                ['DCO', 'std_restriction'], ['DCN', 'std_endorsement'], ['DDD', 'limited_duration'], 
+                ['DDC', 'hazmat_expiry'], ['DAW', 'weight_pounds'], ['DAX', 'weight_kg'], 
+                ['DCE', 'weight_range'], ['DCI', 'place_of_birth'], ['DCJ', 'audit_info'],
+                ['DDH', 'under_18'], ['DDI', 'under_19'], ['DDJ', 'under_21'], ['DDK', 'organ_donor'], 
+                ['DDL', 'veteran'], ['DBN', 'alias_family'], ['DBG', 'alias_given'], ['DBS', 'alias_suffix'],
+                ['IOE', 'issuing_office']
+            ],
+            "ZC": [
+                ['ZCA', 'zca_eye_color'], ['ZCB', 'zcb_hair_color'], ['ZCC', 'zcc_field'],
+                ['ZCD', 'zcd_field'], ['ZCE', 'zce_field'], ['ZCF', 'zcf_field']
+            ]
         };
-        let total_length = 1; 
-        for (const field_name in field_to_id) {
-            const value = record_data[field_name] || '';
-            if (value) total_length += field_to_id[field_name].length + String(value).length + 1;
+
+        // STEP 3: Xây dựng phần body cho từng subfile nếu có dữ liệu.
+        let subfiles = [];
+        for (const [type, elements] of Object.entries(subfileDefinitions)) {
+            let parts = [];
+            for (const [id, key] of elements) {
+                let value = String(record_data[key] || '').trim();
+                if (value) {
+                    parts.push(id + value);
+                }
+            }
+            // Chỉ thêm subfile vào danh sách nếu nó thực sự có nội dung.
+            if (parts.length > 0) {
+                subfiles.push({
+                    type: type,
+                    body: parts.join(LF) // Các trường bên trong subfile được nối bằng LF.
+                });
+            }
         }
-        return total_length;     
-    }
-    
-   // === BẮT ĐẦU CODE CUỐI CÙNG (COPY VÀ THAY THẾ TOÀN BỘ HÀM CŨ) ===
 
-// === BẮT ĐẦU CODE GIẢI PHÁP 1 (DỊCH TỪ PYTHON) ===
-
-// === BẮT ĐẦU CODE THEO CHUẨN AAMVA MỚI NHẤT ===
-
-// === BẮT ĐẦU CODE CUỐI CÙNG (VIẾT LẠI THEO CHUẨN HIỆN ĐẠI) ===
-
-function generateAamvaDataString(record_data) {
-    // STEP 1: XÂY DỰNG BODY CỦA TỪNG SUBFILE RIÊNG BIỆT
-    
-    // Subfile "DL" - Chứa thông tin chính
-    const dl_elements = [
-        ['DAQ', 'customer_id'],
-         ['DCS', 'family_name'], 
-         ['DAC', 'first_name'],
-          ['DAD', 'middle_name'],
-        ['DBD', 'issue_date'], 
-        ['DBB', 'dob'], 
-        ['DBA','expiry_date'], 
-        ['DBC', 'sex'],
-        ['DAY', 'eye_color'],
-         ['DAU', 'height'], 
-         ['DAZ', 'hair_color'], 
-        ['DAG', 'street1'], 
-        ['DAH', 'street2'],
-        ['DAI', 'city'], 
-        ['DAJ', 'state'], 
-        ['DAK', 'postal_code'], 
-        ['DCG', 'country'],
-        ['DDE', 'family_name_trunc'], 
-        ['DDF', 'first_name_trunc'], 
-        ['DDG', 'middle_name_trunc'],
-        ['DCF', 'document_discriminator'], 
-        ['DCK', 'inventory_control'], 
-        ['DDA', 'compliance_type'],
-        ['DDB', 'card_revision_date'],
-        ['DCB', 'restrictions'], 
-        ['DCD', 'endorsements'],
-        ['DCA', 'vehicle_class'], 
-        ['DCM', 'std_vehicle_class'],
-        ['DCO', 'std_restriction'],
-        ['DCN', 'std_endorsement'], 
-        ['DDD', 'limited_duration'], 
-        ['DDC', 'hazmat_expiry'],
-        ['DAW', 'weight_pounds'],
-        ['DAX', 'weight_kg'], 
-        ['DCE', 'weight_range'],
-        ['DCI', 'place_of_birth'], 
-        ['DCJ', 'audit_info'],
-        ['DDH', 'under_18'], 
-        ['DDI', 'under_19'],
-        ['DDJ', 'under_21'],
-        ['DDK', 'organ_donor'], 
-        ['DDL', 'veteran'],
-        ['DBN', 'alias_family'], 
-        ['DBG', 'alias_given'], 
-        ['DBS', 'alias_suffix'],
-        ['IOE', 'issuing_office']
-    ];
-    
-    // Subfile "ZC" - Chứa thông tin phụ, riêng của tiểu bang
-    const zc_elements = [
-        ['ZCA', 'hair_color'], // Ví dụ, một số bang lặp lại thông tin ở đây
-        ['ZCB', 'eye_color']
-        // Bạn có thể thêm các trường ZC khác ở đây nếu cần
-    ];
-
-    let dl_parts = [];
-    for (const [id, key] of dl_elements) {
-        let value = String(record_data[key] || '').trim();
-        if (value) dl_parts.push(id + value);
-    }
-    const dl_body = dl_parts.join('\n');
-
-    let zc_parts = [];
-    for (const [id, key] of zc_elements) {
-        let value = String(record_data[key] || '').trim();
-        if (value) zc_parts.push(id + value);
-    }
-    const zc_body = zc_parts.join('\n');
-
-    // STEP 2: TÍNH TOÁN CÁC THÔNG SỐ (LENGTH, OFFSET, SUBFILE COUNT)
-    const dl_length = dl_body.length + 1; // +1 cho ký tự kết thúc \u000d
-    const zc_length = zc_body ? zc_body.length + 1 : 0;
-    
-    const dl_offset = 41; // Đây là vị trí bắt đầu chuẩn cho subfile đầu tiên
-    const zc_offset = dl_offset + dl_length;
-
-    let subfile_count = 0;
-    if (dl_length > 1) subfile_count++;
-    if (zc_length > 1) subfile_count++;
-
-    // STEP 3: TẠO HEADER HOÀN CHỈNH
-    let header = `@\n\u001e\u000dANSI ${String(record_data.iin || '').padEnd(6, ' ')}` +
-                 `${String(record_data.aamva_version || '09').padStart(2, '0')}` +
-                 `${String(record_data.jurisdiction_version || '01').padStart(2, '0')}` +
-                 `${String(subfile_count).padStart(2, '0')}`;
-
-    // Thêm mô tả cho từng subfile vào header
-    if (dl_length > 1) {
-        header += `DL${String(dl_offset).padStart(4, '0')}${String(dl_length).padStart(4, '0')}`;
-    }
-    if (zc_length > 1) {
-        header += `ZC${String(zc_offset).padStart(4, '0')}${String(zc_length).padStart(4, '0')}`;
-    }
-    header += "DL"; // Thẻ đánh dấu kết thúc header subfiles
-
-    // STEP 4: GHÉP NỐI TẤT CẢ LẠI THÀNH CHUỖI CUỐI CÙNG
-    let final_body_parts = [];
-    if (dl_body) final_body_parts.push(dl_body);
-    if (zc_body) final_body_parts.push(zc_body);
-
-    const final_body = final_body_parts.join('\n');
-    const final_string = header + final_body + "\u000d";
-
-    return final_string;
-}
-
-// === KẾT THÚC CODE CUỐI CÙNG ===
-
-// === KẾT THÚC CODE THEO CHUẨN AAMVA MỚI NHẤT ===
-
-// === KẾT THÚC CODE GIẢI PHÁP 1 ===
-/*Giải pháp 2: Code theo chuẩn AAMVA mới nhất (Khuyến nghị cho tương lai)
-Phiên bản này tuân thủ chuẩn AAMVA Card Design Standard (CDS) mới nhất. Nó đơn giản hơn, dễ đọc hơn và không dùng mã 31 nữa.
-CẢNH BÁO: Hãy thử nghiệm kỹ giải pháp này, vì có thể máy quét của bạn được thiết kế cho chuẩn cũ và sẽ không đọc được định dạng mới này.
-Generated javascript
-// === BẮT ĐẦU CODE GIẢI PHÁP 2 (CHUẨN MỚI NHẤT) ===
-
-function generateAamvaDataString(record_data) {
-    // 1. TẠO BODY DỮ LIỆU TRƯỚC ĐỂ TÍNH ĐỘ DÀI
-    const data_elements = [
-        // Sắp xếp lại theo nhóm logic để dễ đọc, DAQ vẫn ở đầu
-        // Personal
-        ['DAQ', 'customer_id'], ['DCS', 'family_name'], ['DAC', 'first_name'], ['DAD', 'middle_name'], ['DCU', 'name_suffix'],
-        // Dates
-        ['DBB', 'dob'], ['DBA', 'expiry_date'], ['DBD', 'issue_date'],
-        // Physical
-        ['DBC', 'sex'], ['DAY', 'eye_color'], ['DAU', 'height'], ['DAZ', 'hair_color'],
-        // Address
-        ['DAG', 'street1'], ['DAH', 'street2'], ['DAI', 'city'], ['DAJ', 'state'], ['DAK', 'postal_code'],
-        // Licensing
-        ['DCA', 'vehicle_class'], ['DCB', 'restrictions'], ['DCD', 'endorsements'],
-        // System & Other
-        ['DCF', 'document_discriminator'], ['DCG', 'country'], ['DCK', 'inventory_control'],
-        // Các trường khác có thể thêm vào đây theo thứ tự chuẩn
-    ];
-
-    let subfile_parts = [];
-    for (const [element_id, field_name] of data_elements) {
-        let value = String(record_data[field_name] || '').trim();
-        if (value) {
-            subfile_parts.push(element_id + value);
+        const subfileCount = subfiles.length;
+        if (subfileCount === 0) {
+            // Trường hợp không có dữ liệu, trả về chuỗi tối thiểu.
+            return { finalString: "@\n\u001e\rANSI \r", subfileCount: "00", dlLength: "0000", zcLength: "0000" };
         }
+
+        // STEP 4: Xây dựng Header, bao gồm cả "Thư mục Subfile" (Subfile Directory).
+        const preamble = `@${LF}${RS}${CR}`;
+        const fileHeader = `ANSI ${String(record_data.iin || '636000').padEnd(6, ' ')}` +
+                         `${String(record_data.aamva_version || '10').padStart(2, '0')}` +
+                         `${String(record_data.jurisdiction_version || '00').padStart(2, '0')}` +
+                         `${String(subfileCount).padStart(2, '0')}`;
+        
+        const directoryLength = subfileCount * 10; // Mỗi mục trong thư mục có định dạng "TTLLLLOOOO" (10 ký tự).
+        const bodyStartOffset = preamble.length + fileHeader.length + directoryLength;
+        
+        let dlLength = 0, zcLength = 0, currentOffset = 0;
+        let directory = "";
+        let fullBody = "";
+
+        subfiles.forEach((sf) => {
+            // Độ dài của một subfile là độ dài của body + ký tự kết thúc phân đoạn (CR).
+            const subfileLengthWithTerminator = sf.body.length + CR.length;
+            sf.length = subfileLengthWithTerminator;
+            sf.offset = bodyStartOffset + currentOffset;
+
+            // Tạo một mục trong thư mục cho subfile này.
+            directory += `${sf.type}${String(sf.offset).padStart(4, '0')}${String(sf.length).padStart(4, '0')}`;
+            
+            // Nối body của subfile và ký tự kết thúc của nó vào chuỗi body tổng.
+            fullBody += sf.body + CR; 
+            currentOffset += sf.length;
+
+            if(sf.type === 'DL') dlLength = sf.length;
+            if(sf.type === 'ZC') zcLength = sf.length;
+        });
+
+        // STEP 5: Ghép nối tất cả các phần lại với nhau.
+        // **ĐIỂM SỬA LỖI QUAN TRỌNG:** Header và Body được nối liền, không có ký tự thừa nào ở giữa.
+        const finalString = preamble + fileHeader + directory + fullBody;
+        
+        return {
+            finalString: finalString,
+            subfileCount: String(subfileCount).padStart(2, '0'),
+            dlLength: String(dlLength).padStart(4, '0'),
+            zcLength: String(zcLength).padStart(4, '0')
+        };
     }
-    const subfile_body = subfile_parts.join('\n');
-
-    // 2. TÍNH TOÁN ĐỘ DÀI CHÍNH XÁC CỦA SUBFILE
-    // Độ dài subfile = độ dài của body + 1 ký tự kết thúc <CR> (\u000d)
-    const accurate_dl_length = subfile_body.length + 1;
-    const dl_length_str = String(accurate_dl_length).padStart(4, '0');
-
-    // 3. TẠO HEADER CHUẨN MỚI
-    // Header chỉ chứa thông tin chung, không chứa thông tin về subfile
-    const file_header = `@\n\u001e\u000dANSI ${String(record_data.iin || '').padEnd(6, ' ')}` +
-                      `${String(record_data.aamva_version || '10').padStart(2, '0')}` +
-                      `${String(record_data.jurisdiction_version || '00').padStart(2, '0')}` +
-                      `${String(record_data.subfile_count || '01').padStart(2, '0')}`;
-
-    // 4. TẠO SUBFILE HOÀN CHỈNH
-    // Cấu trúc: Mã subfile (DL) + Độ dài + Body + Ký tự kết thúc
-    const subfile = `DL${dl_length_str}${subfile_body}\u000d`;
     
-    // 5. GHÉP HEADER VÀ SUBFILE
-    const final_data_string = file_header + subfile;
-
-    return final_data_string;
-}
-
-// === KẾT THÚC CODE GIẢI PHÁP 2 ===*/
-
-// === KẾT THÚC CODE CUỐI CÙNG ===
+    /**
+     * Tạo hình ảnh mã vạch từ chuỗi dữ liệu.
+     */
     function generateBarcode(dataString, scale, padding) {
         const canvas = document.createElement('canvas');
         try {
             bwipjs.toCanvas(canvas, {
-                bcid: 'pdf417', text: dataString, scale: scale,
-                padding: padding, columns: 13, eclevel: 5
+                bcid: 'pdf417', 
+                text: dataString, // Truyền trực tiếp chuỗi dữ liệu đã được định dạng chuẩn.
+                scale: scale,
+                padding: padding, 
+                columns: 13, 
+                eclevel: 5
             });
             return canvas;
         } catch (e) {
             console.error("Barcode generation error:", e);
-            alert("Lỗi tạo mã vạch: " + e + "\n\nDữ liệu: " + dataString);
+            const readableData = dataString.replace(/\u001e/g, '[RS]').replace(/\r/g, '[CR]').replace(/\n/g, '[LF]\n');
+            alert("Lỗi tạo mã vạch: " + e + "\n\nDữ liệu đã gửi:\n" + readableData);
             return null;
         }
     }
 
+    /**
+     * Tạo và hiển thị tất cả mã vạch cho các bản ghi đã được import/tạo.
+     */
     function generateAndDisplayAllBarcodes() {
         const scale = parseInt(document.getElementById('a417-scale-input').value) || 4;
         const padding = parseInt(document.getElementById('a417-padding-input').value) || 10;
+        
         a417_all_records.forEach((record, index) => {
-            const dl_length = calculateDlSubfileLength(record);
-            record.dl_subfile_length = String(dl_length).padStart(4, '0');
-            const dataString = generateAamvaDataString(record);
-            const canvas = generateBarcode(dataString, scale, padding);
+            const generationResult = generateAamvaDataString(record);
+            const canvas = generateBarcode(generationResult.finalString, scale, padding);
             a417_barcode_images[index] = canvas;
         });
+        
         populateRecordsTable();
          if (a417_all_records.length > 0) {
             onRecordSelect(0); 
         }
-        
     }
     
+    /**
+     * Điền dữ liệu vào bảng danh sách các bản ghi.
+     */
     function populateRecordsTable() {
         recordsTableBody.innerHTML = '';
         a417_all_records.forEach((record, index) => {
@@ -2788,13 +1333,23 @@ function generateAamvaDataString(record_data) {
         });
     }
     
+    /**
+     * Xử lý sự kiện khi một bản ghi trong bảng được chọn.
+     */
     function onRecordSelect(index) {
+        if (index < 0 || index >= a417_all_records.length) return;
         Array.from(recordsTableBody.children).forEach(row => row.classList.remove('selected'));
-        recordsTableBody.querySelector(`[data-index='${index}']`).classList.add('selected');
+        const rowToSelect = recordsTableBody.querySelector(`[data-index='${index}']`);
+        if (rowToSelect) {
+            rowToSelect.classList.add('selected');
+        }
+
         const recordData = a417_all_records[index];
         const canvas = a417_barcode_images[index];
         for(const name in a417_fields) {
-            if(a417_fields[name]) a417_fields[name].value = recordData[name] || '';
+            if(a417_fields[name] && recordData[name] !== undefined) {
+                 a417_fields[name].value = recordData[name];
+            }
         }
         
         if (canvas) {
@@ -2805,12 +1360,25 @@ function generateAamvaDataString(record_data) {
         } else {
             barcodePreview.innerHTML = '<p>Error generating barcode for this record.</p>';
         }
-        const dataString = generateAamvaDataString(recordData);
+
+        const generationResult = generateAamvaDataString(recordData);
+        const dataString = generationResult.finalString;
+        
+        if (a417_fields.subfile_count) a417_fields.subfile_count.value = generationResult.subfileCount;
+        if (a417_fields.dl_subfile_length) a417_fields.dl_subfile_length.value = generationResult.dlLength;
+        if (a417_fields.jurisdiction_subfile_length) a417_fields.jurisdiction_subfile_length.value = generationResult.zcLength;
+
         displayFormattedData(recordData);
-        rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + dataString.replace(/\n/g, '\n').replace(/\u001e/g, '<RS>').replace(/\u000d/g, '<CR>');
+        rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + dataString
+            .replace(/\u001e/g, '<RS>')
+            .replace(/\r/g, '<CR>')
+            .replace(/\n/g, '<LF>\n');
     }
 
-    function displayFormattedData(data) {
+    /**
+     * Hiển thị dữ liệu đã được định dạng một cách dễ đọc.
+     */
+   function displayFormattedData(data) {
         let text = `AAMVA 2020 DL/ID DATA\n====================\n`;
         text += `NAME: ${data.first_name || ''} ${data.middle_name || ''} ${data.family_name || ''}\n`;
         text += `ADDRESS: ${data.street1 || ''}, ${data.city || ''}, ${data.state || ''} ${data.postal_code || ''}\n`;
@@ -2824,49 +1392,80 @@ function generateAamvaDataString(record_data) {
         text += `EXP: ${data.expiry_date || ''}\n`;
         text += `DD: ${data.document_discriminator || ''}\n`;
         text += `ICN: ${data.inventory_control || ''}\n`;
+        
+        let zc_text = '';
+        if (data.zca_eye_color) zc_text += `ZCA: ${data.zca_eye_color}\n`;
+        if (data.zcb_hair_color) zc_text += `ZCB: ${data.zcb_hair_color}\n`;
+        if (data.zcc_field) zc_text += `ZCC: ${data.zcc_field}\n`;
+        if (data.zcd_field) zc_text += `ZCD: ${data.zcd_field}\n`;
+        if (data.zce_field) zc_text += `ZCE: ${data.zce_field}\n`;
+        if (data.zcf_field) zc_text += `ZCF: ${data.zcf_field}\n`;
+
+        if (zc_text) {
+             text += "Jurisdiction Data:\n" + zc_text;
+        }
+
         formattedDataText.value = text;
     }
 
+    /**
+     * Tạo mã vạch cho dữ liệu hiện tại trên form.
+     */
     function generateBarcodeForCurrentData() {
         try {
             const currentData = getCurrentData();
-             if (!currentData.filename) {
-            currentData.filename = currentData.customer_id || `record_${new Date().getTime()}`;
-        }
-            const dl_length = calculateDlSubfileLength(currentData);
-            currentData.dl_subfile_length = String(dl_length).padStart(4, '0');
-            if(a417_fields.dl_subfile_length) a417_fields.dl_subfile_length.value = currentData.dl_subfile_length;
+            if (!currentData.filename) {
+                currentData.filename = currentData.customer_id || `record_${new Date().getTime()}`;
+            }
             
-            const dataString = generateAamvaDataString(currentData);
+            const generationResult = generateAamvaDataString(currentData);
+            const dataString = generationResult.finalString;
+            
+            if (a417_fields.subfile_count) a417_fields.subfile_count.value = generationResult.subfileCount;
+            if (a417_fields.dl_subfile_length) a417_fields.dl_subfile_length.value = generationResult.dlLength;
+            if (a417_fields.jurisdiction_subfile_length) a417_fields.jurisdiction_subfile_length.value = generationResult.zcLength;
+    
             const scale = parseInt(document.getElementById('a417-scale-input').value) || 4;
             const padding = parseInt(document.getElementById('a417-padding-input').value) || 10;
             const canvas = generateBarcode(dataString, scale, padding);
+    
             if(canvas) {
-
                 barcodePreview.innerHTML = '';
                 const img = document.createElement('img');
                 img.src = canvas.toDataURL();
                 barcodePreview.appendChild(img);
                 
                 displayFormattedData(currentData);
-                rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + dataString.replace(/\n/g, '\n').replace(/\u001e/g, '<RS>').replace(/\u000d/g, '<CR>');
-                
+                rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + dataString
+                    .replace(/\u001e/g, '<RS>')
+                    .replace(/\r/g, '<CR>')
+                    .replace(/\n/g, '<LF>\n');
+                                
                 const selectedRow = recordsTableBody.querySelector('tr.selected');
+                let updated = false;
                 if (selectedRow) {
                     const index = parseInt(selectedRow.dataset.index);
-                    a417_all_records[index] = currentData;
-                    a417_barcode_images[index] = canvas;
-                    populateRecordsTable();
-                    const newSelectedRow = recordsTableBody.querySelector(`[data-index='${index}']`);
-                    if (newSelectedRow) newSelectedRow.classList.add('selected');
-                } else {
+                    if (index >= 0 && index < a417_all_records.length) {
+                        a417_all_records[index] = currentData;
+                        a417_barcode_images[index] = canvas;
+                        populateRecordsTable();
+                        const newSelectedRow = recordsTableBody.querySelector(`[data-index='${index}']`);
+                        if (newSelectedRow) newSelectedRow.classList.add('selected');
+                        updated = true;
+                    }
+                } 
+                
+                if (!updated) {
                     a417_all_records.push(currentData);
                     a417_barcode_images[a417_all_records.length - 1] = canvas;
                     populateRecordsTable();
                     const newIndex = a417_all_records.length - 1;
                     const newRow = recordsTableBody.querySelector(`[data-index='${newIndex}']`);
-                    if (newRow) newRow.classList.add('selected');
+                    if (newRow) {
+                         onRecordSelect(newIndex);
+                    }
                 }
+    
             } else {
                 alert("Failed to generate barcode.");
             }
@@ -2876,6 +1475,9 @@ function generateAamvaDataString(record_data) {
         }
     }
     
+    /**
+     * Xuất tất cả các mã vạch đã tạo ra thành file ảnh.
+     */
     async function exportAllImages() {
         if (a417_all_records.length === 0) {
             alert("No data to export. Please import from Excel or generate data first.");
@@ -2893,8 +1495,8 @@ function generateAamvaDataString(record_data) {
             const filenamesToExport = [];
             for (let i = 0; i < a417_all_records.length; i++) {
                 const record = a417_all_records[i];
-                const dataString = generateAamvaDataString(record);
-                const barcodeCanvas = generateBarcode(dataString, scale, 0);
+                const generationResult = generateAamvaDataString(record);
+                const barcodeCanvas = generateBarcode(generationResult.finalString, scale, 0);
                 if (!barcodeCanvas) continue;
                 const finalCanvas = document.createElement('canvas');
                 const ctx = finalCanvas.getContext('2d');
@@ -2917,5 +1519,6 @@ function generateAamvaDataString(record_data) {
         }
     }
     
+    // --- Khởi chạy ---
     buildFormAndControls();
 }

@@ -50,7 +50,7 @@
 -Wisconsin (DONE)-WI-ICN(DONE)('OT + first letter of Last name + issue date (YYYMMDD) 8 digits. You can click on the calculator icon to calculate DD automatically!)
 -Wyoming (DONE)-iCN (DONE)WY(10000 + 5 random digits)
 
-Câu trả lời trực tiếp: Cả hai đều không phải là "mới nhất". Chuẩn AAMVA mới nhất (từ khoảng 2016 trở đi) đã loại bỏ hoàn toàn cấu trúc DL0031 và DL0042.
+Câu trả lời trực tiếp: Cả hai đều không phải là "mới nhất". Chuẩn AAMVA mới nhất (từ khoảng 2016 trở đi) đã loại bỏ hoàn toàn cấu trúc DL0031.
 Tuy nhiên, trong hai lựa chọn này:
 31 là mã từ một chuẩn cũ hơn nhưng được sử dụng rất rộng rãi và hợp lệ.
 42 gần như chắc chắn là một lỗi hoặc một cách triển khai không theo chuẩn.
@@ -141,4 +141,15 @@ function generateAamvaDataString(record_data) {
     return final_data_string;
 }
 
-// === KẾT THÚC CODE GIẢI PHÁP 2 ===
+Header và Body nối liền (Quan trọng nhất):
+Trước đây: finalString = fullHeader + LF + fullBody + CR; (Có LF thừa)
+Bây giờ: finalString = preamble + fileHeader + directory + fullBody;
+Giải thích: Logic mới đảm bảo header (bao gồm cả thư mục subfile) và body dữ liệu được nối liền với nhau thành một chuỗi duy nhất, không có bất kỳ ký tự phân tách nào ở giữa. Máy quét giờ đây sẽ nhảy đến đúng vị trí bắt đầu của subfile DL.
+Tính toán Offset và Length Chính xác:
+Logic tính toán offset và length giờ đây đã đúng. Nó tính toán chính xác vị trí bắt đầu của toàn bộ khối dữ liệu (bodyStartOffset) và sau đó tính toán vị trí và độ dài của từng subfile (DL, ZC) một cách tuần tự.
+Độ dài của mỗi subfile (sf.length) cũng được tính toán chính xác, bao gồm cả ký tự kết thúc phân đoạn (CR) của subfile đó.
+Cấu trúc Subfile Chuẩn:
+Mỗi subfile (ví dụ, toàn bộ khối dữ liệu của DL) giờ đây kết thúc bằng một ký tự <CR> (Segment Terminator) duy nhất, đúng như tiêu chuẩn.
+Toàn bộ chuỗi dữ liệu kết thúc bằng ký tự <CR> của subfile cuối cùng, không có ký tự thừa nào nữa.
+Giữ lại các Cải tiến:
+Tất cả các tính năng mới từ phiên bản trước (như các trường ZC, nhập liệu Excel, tạo dữ liệu ngẫu nhiên) đều được giữ lại và hoạt động tốt với cấu trúc mới.
