@@ -1173,17 +1173,14 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
     
     /**
      * Hàm quan trọng nhất: Tạo chuỗi dữ liệu thô tuân thủ tiêu chuẩn AAMVA.
-     * Phiên bản này đã được sửa lỗi để đảm bảo cấu trúc header, offset, và body chính xác.
      * @param {object} record_data - Dữ liệu từ form hoặc file Excel.
      * @returns {object} - Chứa chuỗi dữ liệu cuối cùng và các thông tin header.
      */
     function generateAamvaDataString(record_data) {
-        // STEP 1: Định nghĩa các ký tự phân tách đặc biệt theo tiêu chuẩn AAMVA.
-        const LF = '\n'; // Line Feed (U+000A), dùng làm Field Separator (phân tách trường).
-        const CR = '\r'; // Carriage Return (U+000D), dùng làm Segment Terminator (kết thúc subfile).
-        const RS = String.fromCharCode(30); // Record Separator (U+001E), phân tách header và record.
+        const LF = '\n'; 
+        const CR = '\r'; 
+        const RS = String.fromCharCode(30);
         
-        // STEP 2: Định nghĩa cấu trúc của các subfile (DL, ZC, ...).
         const subfileDefinitions = {
             "DL": [
                 ['DAQ', 'customer_id'], ['DCS', 'family_name'], ['DAC', 'first_name'], ['DAD', 'middle_name'],
@@ -1207,7 +1204,6 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             ]
         };
 
-        // STEP 3: Xây dựng phần body cho từng subfile nếu có dữ liệu.
         let subfiles = [];
         for (const [type, elements] of Object.entries(subfileDefinitions)) {
             let parts = [];
@@ -1217,54 +1213,51 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
                     parts.push(id + value);
                 }
             }
-            // Chỉ thêm subfile vào danh sách nếu nó thực sự có nội dung.
             if (parts.length > 0) {
                 subfiles.push({
                     type: type,
-                    body: parts.join(LF) // Các trường bên trong subfile được nối bằng LF.
+                    body: parts.join(LF)
                 });
             }
         }
 
         const subfileCount = subfiles.length;
         if (subfileCount === 0) {
-            // Trường hợp không có dữ liệu, trả về chuỗi tối thiểu.
             return { finalString: "@\n\u001e\rANSI \r", subfileCount: "00", dlLength: "0000", zcLength: "0000" };
         }
 
-        // STEP 4: Xây dựng Header, bao gồm cả "Thư mục Subfile" (Subfile Directory).
         const preamble = `@${LF}${RS}${CR}`;
         const fileHeader = `ANSI ${String(record_data.iin || '636000').padEnd(6, ' ')}` +
                          `${String(record_data.aamva_version || '10').padStart(2, '0')}` +
                          `${String(record_data.jurisdiction_version || '00').padStart(2, '0')}` +
                          `${String(subfileCount).padStart(2, '0')}`;
         
-        const directoryLength = subfileCount * 10; // Mỗi mục trong thư mục có định dạng "TTLLLLOOOO" (10 ký tự).
+        const directoryLength = subfileCount * 10;
         const bodyStartOffset = preamble.length + fileHeader.length + directoryLength;
         
         let dlLength = 0, zcLength = 0, currentOffset = 0;
         let directory = "";
         let fullBody = "";
 
-        subfiles.forEach((sf) => {
-            // Độ dài của một subfile là độ dài của body + ký tự kết thúc phân đoạn (CR).
-            const subfileLengthWithTerminator = sf.body.length + CR.length;
-            sf.length = subfileLengthWithTerminator;
+        subfiles.forEach((sf, index) => {
+            // Độ dài của subfile là độ dài của body + ký tự phân tách trường (LF) cuối cùng trước subfile tiếp theo hoặc CR cuối cùng.
+            const subfileLength = sf.body.length + LF.length;
+            sf.length = subfileLength;
             sf.offset = bodyStartOffset + currentOffset;
-
-            // Tạo một mục trong thư mục cho subfile này.
+            
             directory += `${sf.type}${String(sf.offset).padStart(4, '0')}${String(sf.length).padStart(4, '0')}`;
             
-            // Nối body của subfile và ký tự kết thúc của nó vào chuỗi body tổng.
-            fullBody += sf.body + CR; 
+            // Nối body của subfile và ký tự phân tách LF vào chuỗi body tổng.
+            fullBody += sf.body + LF;
             currentOffset += sf.length;
 
             if(sf.type === 'DL') dlLength = sf.length;
             if(sf.type === 'ZC') zcLength = sf.length;
         });
 
-        // STEP 5: Ghép nối tất cả các phần lại với nhau.
-        // **ĐIỂM SỬA LỖI QUAN TRỌNG:** Header và Body được nối liền, không có ký tự thừa nào ở giữa.
+        // **FIX:** Loại bỏ LF cuối cùng và thay bằng một CR duy nhất.
+        fullBody = fullBody.slice(0, -1) + CR;
+
         const finalString = preamble + fileHeader + directory + fullBody;
         
         return {
@@ -1283,7 +1276,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         try {
             bwipjs.toCanvas(canvas, {
                 bcid: 'pdf417', 
-                text: dataString, // Truyền trực tiếp chuỗi dữ liệu đã được định dạng chuẩn.
+                text: dataString, 
                 scale: scale,
                 padding: padding, 
                 columns: 13, 
