@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 // js/pdf417-generator.js (Phiên bản hoàn chỉnh, đã xác thực)
+=======
+// js/pdf417-generator.js
+>>>>>>> f1850e2bb2d057cb3b92fdfa652101f4a0f02912
 
 /**
  * Khởi tạo toàn bộ chức năng của trình tạo mã vạch PDF417 AAMVA.
@@ -624,6 +628,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
     const MI_calculate_documentNumber = () => {
         const lastName = a417_fields.family_name.value;
         if (!lastName) { showInputDataAlert("MI Doc Number error: Last Name is required!"); return; }
+<<<<<<< HEAD
         a417_fields.customer_id.value = lastName.charAt(0).toUpperCase() + getRandomNumericString(12);
     };
     
@@ -638,6 +643,17 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         const expiry_YYYYMMDD = expiry_date.value.slice(-4) + expiry_date.value.slice(0, 2) + expiry_date.value.slice(2, 4);
         const exp_YYMM = expiry_date.value.slice(-2) + expiry_date.value.slice(0, 2);
         a417_fields.inventory_control.value = docNumWithoutSpaces + expiry_YYYYMMDD + exp_YYMM;
+=======
+        a417_fields.customer_id.value = lastName.charAt(0).toUpperCase() + " " + getRandomNumericString(3) + " " + getRandomNumericString(3) + " " + getRandomNumericString(3);
+    };
+    const MI_calculate_ICN = () => {
+        const { customer_id, dob, expiry_date } = a417_fields;
+        if (!customer_id.value || !dob.value || dob.value.length !== 8 || !expiry_date.value || expiry_date.value.length !== 8) { showInputDataAlert("MI ICN error: Valid Doc Num, DOB, and Expiry Date are required."); return; }
+        const docNumWithoutSpaces = customer_id.value.replace(/\s/g, '');
+        const dob_YYYYMMDD = dob.value.slice(-4) + dob.value.slice(0, 2) + dob.value.slice(2, 4);
+        const exp_YYMM = expiry_date.value.slice(-2) + expiry_date.value.slice(0, 2);
+        a417_fields.inventory_control.value = docNumWithoutSpaces + dob_YYYYMMDD + exp_YYMM;
+>>>>>>> f1850e2bb2d057cb3b92fdfa652101f4a0f02912
     };
     const MI_calculate_DD = () => { a417_fields.document_discriminator.value = getRandomNumericString(13); };
 
@@ -1177,7 +1193,11 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
     }
     
     /**
+<<<<<<< HEAD
      * [PHIÊN BẢN CHUẨN] Hàm quan trọng nhất: Tạo chuỗi dữ liệu thô tuân thủ tiêu chuẩn AAMVA.
+=======
+     * Hàm quan trọng nhất: Tạo chuỗi dữ liệu thô tuân thủ tiêu chuẩn AAMVA.
+>>>>>>> f1850e2bb2d057cb3b92fdfa652101f4a0f02912
      * @param {object} record_data - Dữ liệu từ form hoặc file Excel.
      * @returns {object} - Chứa chuỗi dữ liệu cuối cùng và các thông tin header.
      */
@@ -1201,7 +1221,10 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
                 ['DCE', 'weight_range'], ['DCI', 'place_of_birth'], ['DCJ', 'audit_info'],
                 ['DDH', 'under_18'], ['DDI', 'under_19'], ['DDJ', 'under_21'], ['DDK', 'organ_donor'], 
                 ['DDL', 'veteran'], ['DBN', 'alias_family'], ['DBG', 'alias_given'], ['DBS', 'alias_suffix'],
+<<<<<<< HEAD
                 ['DCU', 'name_suffix'],
+=======
+>>>>>>> f1850e2bb2d057cb3b92fdfa652101f4a0f02912
                 ['IOE', 'issuing_office']
             ],
             "ZC": [
@@ -1210,12 +1233,16 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             ]
         };
 
+<<<<<<< HEAD
         const preamble = `@${LF}${RS}${CR}`;
 
         // Bước 1: Thu thập các subfile có dữ liệu
         let activeSubfiles = [];
         let dlLength = 0, zcLength = 0;
         
+=======
+        let subfiles = [];
+>>>>>>> f1850e2bb2d057cb3b92fdfa652101f4a0f02912
         for (const [type, elements] of Object.entries(subfileDefinitions)) {
             let parts = [];
             for (const [id, key] of elements) {
@@ -1224,6 +1251,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
                     parts.push(id + value);
                 }
             }
+<<<<<<< HEAD
             
             if (parts.length > 0) {
                 const subfileBody = parts.join(LF);
@@ -1241,16 +1269,32 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         }
         
         const subfileCount = activeSubfiles.length;
+=======
+            if (parts.length > 0) {
+                subfiles.push({
+                    type: type,
+                    body: parts.join(LF)
+                });
+            }
+        }
+
+        const subfileCount = subfiles.length;
+>>>>>>> f1850e2bb2d057cb3b92fdfa652101f4a0f02912
         if (subfileCount === 0) {
             return { finalString: "@\n\u001e\rANSI \r", subfileCount: "00", dlLength: "0000", zcLength: "0000" };
         }
 
+<<<<<<< HEAD
         // Bước 2: Tạo Header
+=======
+        const preamble = `@${LF}${RS}${CR}`;
+>>>>>>> f1850e2bb2d057cb3b92fdfa652101f4a0f02912
         const fileHeader = `ANSI ${String(record_data.iin || '636000').padEnd(6, ' ')}` +
                          `${String(record_data.aamva_version || '10').padStart(2, '0')}` +
                          `${String(record_data.jurisdiction_version || '00').padStart(2, '0')}` +
                          `${String(subfileCount).padStart(2, '0')}`;
         
+<<<<<<< HEAD
         // Bước 3: Tạo Thư mục (Directory) và Body tổng
         let directory = "";
         let fullBody = "";
@@ -1265,6 +1309,36 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         // Bước 4: Ghép tất cả lại và kết thúc bằng CR
         const finalString = preamble + fileHeader + directory + fullBody + CR;
 
+=======
+        const directoryLength = subfileCount * 10;
+        const bodyStartOffset = preamble.length + fileHeader.length + directoryLength;
+        
+        let dlLength = 0, zcLength = 0, currentOffset = 0;
+        let directory = "";
+        let fullBody = "";
+
+        subfiles.forEach((sf, index) => {
+            // Độ dài của subfile là độ dài của body + ký tự phân tách trường (LF) cuối cùng trước subfile tiếp theo hoặc CR cuối cùng.
+            const subfileLength = sf.body.length + LF.length;
+            sf.length = subfileLength;
+            sf.offset = bodyStartOffset + currentOffset;
+            
+            directory += `${sf.type}${String(sf.offset).padStart(4, '0')}${String(sf.length).padStart(4, '0')}`;
+            
+            // Nối body của subfile và ký tự phân tách LF vào chuỗi body tổng.
+            fullBody += sf.body + LF;
+            currentOffset += sf.length;
+
+            if(sf.type === 'DL') dlLength = sf.length;
+            if(sf.type === 'ZC') zcLength = sf.length;
+        });
+
+        // **FIX:** Loại bỏ LF cuối cùng và thay bằng một CR duy nhất.
+        fullBody = fullBody.slice(0, -1) + CR;
+
+        const finalString = preamble + fileHeader + directory + fullBody;
+        
+>>>>>>> f1850e2bb2d057cb3b92fdfa652101f4a0f02912
         return {
             finalString: finalString,
             subfileCount: String(subfileCount).padStart(2, '0'),
@@ -1290,7 +1364,11 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             return canvas;
         } catch (e) {
             console.error("Barcode generation error:", e);
+<<<<<<< HEAD
             const readableData = dataString.replace(/\u001e/g, ' <RS> ').replace(/\r/g, ' <CR>').replace(/\n/g, '<LF>\n');
+=======
+            const readableData = dataString.replace(/\u001e/g, '[RS]').replace(/\r/g, '[CR]').replace(/\n/g, '[LF]\n');
+>>>>>>> f1850e2bb2d057cb3b92fdfa652101f4a0f02912
             alert("Lỗi tạo mã vạch: " + e + "\n\nDữ liệu đã gửi:\n" + readableData);
             return null;
         }
@@ -1335,9 +1413,13 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
      * Xử lý sự kiện khi một bản ghi trong bảng được chọn.
      */
     function onRecordSelect(index) {
+<<<<<<< HEAD
         // Chỉ cập nhật hiển thị, không thay đổi dữ liệu
         if (index < 0 || index >= a417_all_records.length) return;
 
+=======
+        if (index < 0 || index >= a417_all_records.length) return;
+>>>>>>> f1850e2bb2d057cb3b92fdfa652101f4a0f02912
         Array.from(recordsTableBody.children).forEach(row => row.classList.remove('selected'));
         const rowToSelect = recordsTableBody.querySelector(`[data-index='${index}']`);
         if (rowToSelect) {
@@ -1369,6 +1451,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         if (a417_fields.jurisdiction_subfile_length) a417_fields.jurisdiction_subfile_length.value = generationResult.zcLength;
 
         displayFormattedData(recordData);
+<<<<<<< HEAD
         
         const readableString = dataString
             .replace(/\u001e/g, ' <RS> ')
@@ -1376,6 +1459,12 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             .replace(/\n/g, '<LF>\n');
         
         rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + readableString;
+=======
+        rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + dataString
+            .replace(/\u001e/g, '<RS>')
+            .replace(/\r/g, '<CR>')
+            .replace(/\n/g, '<LF>\n');
+>>>>>>> f1850e2bb2d057cb3b92fdfa652101f4a0f02912
     }
 
     /**
@@ -1423,20 +1512,44 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             
             const generationResult = generateAamvaDataString(currentData);
             const dataString = generationResult.finalString;
+<<<<<<< HEAD
+=======
+            
+            if (a417_fields.subfile_count) a417_fields.subfile_count.value = generationResult.subfileCount;
+            if (a417_fields.dl_subfile_length) a417_fields.dl_subfile_length.value = generationResult.dlLength;
+            if (a417_fields.jurisdiction_subfile_length) a417_fields.jurisdiction_subfile_length.value = generationResult.zcLength;
+>>>>>>> f1850e2bb2d057cb3b92fdfa652101f4a0f02912
     
             const scale = parseInt(document.getElementById('a417-scale-input').value) || 4;
             const padding = parseInt(document.getElementById('a417-padding-input').value) || 10;
             const canvas = generateBarcode(dataString, scale, padding);
     
             if(canvas) {
+<<<<<<< HEAD
                 // Thêm hoặc cập nhật bản ghi trong danh sách
                 const selectedRow = recordsTableBody.querySelector('tr.selected');
                 let newIndex = -1;
+=======
+                barcodePreview.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = canvas.toDataURL();
+                barcodePreview.appendChild(img);
+                
+                displayFormattedData(currentData);
+                rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + dataString
+                    .replace(/\u001e/g, '<RS>')
+                    .replace(/\r/g, '<CR>')
+                    .replace(/\n/g, '<LF>\n');
+                                
+                const selectedRow = recordsTableBody.querySelector('tr.selected');
+                let updated = false;
+>>>>>>> f1850e2bb2d057cb3b92fdfa652101f4a0f02912
                 if (selectedRow) {
                     const index = parseInt(selectedRow.dataset.index);
                     if (index >= 0 && index < a417_all_records.length) {
                         a417_all_records[index] = currentData;
                         a417_barcode_images[index] = canvas;
+<<<<<<< HEAD
                         newIndex = index;
                     }
                 } 
@@ -1449,6 +1562,25 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
                 
                 populateRecordsTable();
                 onRecordSelect(newIndex); // Chọn và hiển thị bản ghi vừa được tạo/cập nhật
+=======
+                        populateRecordsTable();
+                        const newSelectedRow = recordsTableBody.querySelector(`[data-index='${index}']`);
+                        if (newSelectedRow) newSelectedRow.classList.add('selected');
+                        updated = true;
+                    }
+                } 
+                
+                if (!updated) {
+                    a417_all_records.push(currentData);
+                    a417_barcode_images[a417_all_records.length - 1] = canvas;
+                    populateRecordsTable();
+                    const newIndex = a417_all_records.length - 1;
+                    const newRow = recordsTableBody.querySelector(`[data-index='${newIndex}']`);
+                    if (newRow) {
+                         onRecordSelect(newIndex);
+                    }
+                }
+>>>>>>> f1850e2bb2d057cb3b92fdfa652101f4a0f02912
     
             } else {
                 alert("Failed to generate barcode.");
