@@ -1,4 +1,4 @@
-// js/pdf417-generator.js
+// js/pdf417-generator.js (Phiên bản hoàn chỉnh, đã xác thực)
 
 /**
  * Khởi tạo toàn bộ chức năng của trình tạo mã vạch PDF417 AAMVA.
@@ -624,15 +624,20 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
     const MI_calculate_documentNumber = () => {
         const lastName = a417_fields.family_name.value;
         if (!lastName) { showInputDataAlert("MI Doc Number error: Last Name is required!"); return; }
-        a417_fields.customer_id.value = lastName.charAt(0).toUpperCase() + " " + getRandomNumericString(3) + " " + getRandomNumericString(3) + " " + getRandomNumericString(3);
+        a417_fields.customer_id.value = lastName.charAt(0).toUpperCase() + getRandomNumericString(12);
     };
+    
+    // === HÀM ĐÃ SỬA LỖI TÍNH TOÁN ===
     const MI_calculate_ICN = () => {
-        const { customer_id, dob, expiry_date } = a417_fields;
-        if (!customer_id.value || !dob.value || dob.value.length !== 8 || !expiry_date.value || expiry_date.value.length !== 8) { showInputDataAlert("MI ICN error: Valid Doc Num, DOB, and Expiry Date are required."); return; }
+        const { customer_id, expiry_date } = a417_fields;
+        if (!customer_id.value || !expiry_date.value || expiry_date.value.length !== 8) { 
+            showInputDataAlert("MI ICN error: Valid Doc Num and Expiry Date are required."); 
+            return; 
+        }
         const docNumWithoutSpaces = customer_id.value.replace(/\s/g, '');
-        const dob_YYYYMMDD = dob.value.slice(-4) + dob.value.slice(0, 2) + dob.value.slice(2, 4);
+        const expiry_YYYYMMDD = expiry_date.value.slice(-4) + expiry_date.value.slice(0, 2) + expiry_date.value.slice(2, 4);
         const exp_YYMM = expiry_date.value.slice(-2) + expiry_date.value.slice(0, 2);
-        a417_fields.inventory_control.value = docNumWithoutSpaces + dob_YYYYMMDD + exp_YYMM;
+        a417_fields.inventory_control.value = docNumWithoutSpaces + expiry_YYYYMMDD + exp_YYMM;
     };
     const MI_calculate_DD = () => { a417_fields.document_discriminator.value = getRandomNumericString(13); };
 
@@ -1172,7 +1177,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
     }
     
     /**
-     * Hàm quan trọng nhất: Tạo chuỗi dữ liệu thô tuân thủ tiêu chuẩn AAMVA.
+     * [PHIÊN BẢN CHUẨN] Hàm quan trọng nhất: Tạo chuỗi dữ liệu thô tuân thủ tiêu chuẩn AAMVA.
      * @param {object} record_data - Dữ liệu từ form hoặc file Excel.
      * @returns {object} - Chứa chuỗi dữ liệu cuối cùng và các thông tin header.
      */
@@ -1196,6 +1201,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
                 ['DCE', 'weight_range'], ['DCI', 'place_of_birth'], ['DCJ', 'audit_info'],
                 ['DDH', 'under_18'], ['DDI', 'under_19'], ['DDJ', 'under_21'], ['DDK', 'organ_donor'], 
                 ['DDL', 'veteran'], ['DBN', 'alias_family'], ['DBG', 'alias_given'], ['DBS', 'alias_suffix'],
+                ['DCU', 'name_suffix'],
                 ['IOE', 'issuing_office']
             ],
             "ZC": [
@@ -1204,7 +1210,12 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             ]
         };
 
-        let subfiles = [];
+        const preamble = `@${LF}${RS}${CR}`;
+
+        // Bước 1: Thu thập các subfile có dữ liệu
+        let activeSubfiles = [];
+        let dlLength = 0, zcLength = 0;
+        
         for (const [type, elements] of Object.entries(subfileDefinitions)) {
             let parts = [];
             for (const [id, key] of elements) {
@@ -1213,53 +1224,47 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
                     parts.push(id + value);
                 }
             }
+            
             if (parts.length > 0) {
-                subfiles.push({
+                const subfileBody = parts.join(LF);
+                const subfileDataBlock = type + subfileBody;
+                
+                activeSubfiles.push({
                     type: type,
-                    body: parts.join(LF)
+                    dataBlock: subfileDataBlock,
+                    length: subfileDataBlock.length
                 });
+
+                if(type === 'DL') dlLength = subfileDataBlock.length;
+                if(type === 'ZC') zcLength = subfileDataBlock.length;
             }
         }
-
-        const subfileCount = subfiles.length;
+        
+        const subfileCount = activeSubfiles.length;
         if (subfileCount === 0) {
             return { finalString: "@\n\u001e\rANSI \r", subfileCount: "00", dlLength: "0000", zcLength: "0000" };
         }
 
-        const preamble = `@${LF}${RS}${CR}`;
+        // Bước 2: Tạo Header
         const fileHeader = `ANSI ${String(record_data.iin || '636000').padEnd(6, ' ')}` +
                          `${String(record_data.aamva_version || '10').padStart(2, '0')}` +
                          `${String(record_data.jurisdiction_version || '00').padStart(2, '0')}` +
                          `${String(subfileCount).padStart(2, '0')}`;
         
-        const directoryLength = subfileCount * 10;
-        const bodyStartOffset = preamble.length + fileHeader.length + directoryLength;
-        
-        let dlLength = 0, zcLength = 0, currentOffset = 0;
+        // Bước 3: Tạo Thư mục (Directory) và Body tổng
         let directory = "";
         let fullBody = "";
+        let currentOffset = preamble.length + fileHeader.length + (subfileCount * 10);
 
-        subfiles.forEach((sf, index) => {
-            // Độ dài của subfile là độ dài của body + ký tự phân tách trường (LF) cuối cùng trước subfile tiếp theo hoặc CR cuối cùng.
-            const subfileLength = sf.body.length + LF.length;
-            sf.length = subfileLength;
-            sf.offset = bodyStartOffset + currentOffset;
-            
-            directory += `${sf.type}${String(sf.offset).padStart(4, '0')}${String(sf.length).padStart(4, '0')}`;
-            
-            // Nối body của subfile và ký tự phân tách LF vào chuỗi body tổng.
-            fullBody += sf.body + LF;
+        activeSubfiles.forEach(sf => {
+            directory += `${sf.type}${String(currentOffset).padStart(4, '0')}${String(sf.length).padStart(4, '0')}`;
+            fullBody += sf.dataBlock;
             currentOffset += sf.length;
-
-            if(sf.type === 'DL') dlLength = sf.length;
-            if(sf.type === 'ZC') zcLength = sf.length;
         });
 
-        // **FIX:** Loại bỏ LF cuối cùng và thay bằng một CR duy nhất.
-        fullBody = fullBody.slice(0, -1) + CR;
+        // Bước 4: Ghép tất cả lại và kết thúc bằng CR
+        const finalString = preamble + fileHeader + directory + fullBody + CR;
 
-        const finalString = preamble + fileHeader + directory + fullBody;
-        
         return {
             finalString: finalString,
             subfileCount: String(subfileCount).padStart(2, '0'),
@@ -1285,7 +1290,7 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             return canvas;
         } catch (e) {
             console.error("Barcode generation error:", e);
-            const readableData = dataString.replace(/\u001e/g, '[RS]').replace(/\r/g, '[CR]').replace(/\n/g, '[LF]\n');
+            const readableData = dataString.replace(/\u001e/g, ' <RS> ').replace(/\r/g, ' <CR>').replace(/\n/g, '<LF>\n');
             alert("Lỗi tạo mã vạch: " + e + "\n\nDữ liệu đã gửi:\n" + readableData);
             return null;
         }
@@ -1330,7 +1335,9 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
      * Xử lý sự kiện khi một bản ghi trong bảng được chọn.
      */
     function onRecordSelect(index) {
+        // Chỉ cập nhật hiển thị, không thay đổi dữ liệu
         if (index < 0 || index >= a417_all_records.length) return;
+
         Array.from(recordsTableBody.children).forEach(row => row.classList.remove('selected'));
         const rowToSelect = recordsTableBody.querySelector(`[data-index='${index}']`);
         if (rowToSelect) {
@@ -1362,10 +1369,13 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
         if (a417_fields.jurisdiction_subfile_length) a417_fields.jurisdiction_subfile_length.value = generationResult.zcLength;
 
         displayFormattedData(recordData);
-        rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + dataString
-            .replace(/\u001e/g, '<RS>')
-            .replace(/\r/g, '<CR>')
+        
+        const readableString = dataString
+            .replace(/\u001e/g, ' <RS> ')
+            .replace(/\r/g, ' <CR>')
             .replace(/\n/g, '<LF>\n');
+        
+        rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + readableString;
     }
 
     /**
@@ -1413,51 +1423,32 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
             
             const generationResult = generateAamvaDataString(currentData);
             const dataString = generationResult.finalString;
-            
-            if (a417_fields.subfile_count) a417_fields.subfile_count.value = generationResult.subfileCount;
-            if (a417_fields.dl_subfile_length) a417_fields.dl_subfile_length.value = generationResult.dlLength;
-            if (a417_fields.jurisdiction_subfile_length) a417_fields.jurisdiction_subfile_length.value = generationResult.zcLength;
     
             const scale = parseInt(document.getElementById('a417-scale-input').value) || 4;
             const padding = parseInt(document.getElementById('a417-padding-input').value) || 10;
             const canvas = generateBarcode(dataString, scale, padding);
     
             if(canvas) {
-                barcodePreview.innerHTML = '';
-                const img = document.createElement('img');
-                img.src = canvas.toDataURL();
-                barcodePreview.appendChild(img);
-                
-                displayFormattedData(currentData);
-                rawDataText.value = "RAW AAMVA DATA STRING:\n====================\n" + dataString
-                    .replace(/\u001e/g, '<RS>')
-                    .replace(/\r/g, '<CR>')
-                    .replace(/\n/g, '<LF>\n');
-                                
+                // Thêm hoặc cập nhật bản ghi trong danh sách
                 const selectedRow = recordsTableBody.querySelector('tr.selected');
-                let updated = false;
+                let newIndex = -1;
                 if (selectedRow) {
                     const index = parseInt(selectedRow.dataset.index);
                     if (index >= 0 && index < a417_all_records.length) {
                         a417_all_records[index] = currentData;
                         a417_barcode_images[index] = canvas;
-                        populateRecordsTable();
-                        const newSelectedRow = recordsTableBody.querySelector(`[data-index='${index}']`);
-                        if (newSelectedRow) newSelectedRow.classList.add('selected');
-                        updated = true;
+                        newIndex = index;
                     }
                 } 
                 
-                if (!updated) {
+                if (newIndex === -1) {
                     a417_all_records.push(currentData);
-                    a417_barcode_images[a417_all_records.length - 1] = canvas;
-                    populateRecordsTable();
-                    const newIndex = a417_all_records.length - 1;
-                    const newRow = recordsTableBody.querySelector(`[data-index='${newIndex}']`);
-                    if (newRow) {
-                         onRecordSelect(newIndex);
-                    }
+                    newIndex = a417_all_records.length - 1;
+                    a417_barcode_images[newIndex] = canvas;
                 }
+                
+                populateRecordsTable();
+                onRecordSelect(newIndex); // Chọn và hiển thị bản ghi vừa được tạo/cập nhật
     
             } else {
                 alert("Failed to generate barcode.");
@@ -1471,47 +1462,92 @@ function initializePdf417Generator(exportCanvasesToDirectory) {
     /**
      * Xuất tất cả các mã vạch đã tạo ra thành file ảnh.
      */
+   // js/pdf417-generator.js
+
+// ... (giữ nguyên toàn bộ code của bạn cho đến hàm exportAllImages)
+
+    /**
+     * Xuất tất cả các mã vạch đã tạo ra thành file ảnh. (PHIÊN BẢN ĐÃ SỬA LỖI)
+     */
     async function exportAllImages() {
         if (a417_all_records.length === 0) {
-            alert("No data to export. Please import from Excel or generate data first.");
+            alert("Không có dữ liệu để xuất. Vui lòng import từ Excel hoặc tạo dữ liệu trước.");
             return;
         }
+
+        let directoryHandle;
+        try {
+            // BƯỚC 1: Yêu cầu quyền truy cập thư mục NGAY LẬP TỨC.
+            // Đây là phần "user gesture" nên phải được thực hiện đầu tiên.
+            directoryHandle = await window.showDirectoryPicker();
+        } catch (err) {
+            // Người dùng đã hủy hộp thoại chọn thư mục
+            console.log("User cancelled the directory picker.");
+            return; // Dừng hàm nếu người dùng không chọn thư mục
+        }
+        
+        // Hiển thị một chỉ báo đang tải (tùy chọn nhưng nên có)
+        // Ví dụ: document.getElementById('loading-indicator').style.display = 'block';
+        alert(`Bắt đầu xuất ${a417_all_records.length} ảnh. Vui lòng chờ...`);
+
+
         try {
             const useFixedSize = document.getElementById('a417-fixed-size-check').checked;
             const scale = parseInt(document.getElementById('a417-scale-input').value);
             const fixedW = useFixedSize ? parseInt(document.getElementById('a417-fixed-width-input').value) : 0;
             const fixedH = useFixedSize ? parseInt(document.getElementById('a417-fixed-height-input').value) : 0;
+
             if (useFixedSize && (fixedW <= 0 || fixedH <= 0)) {
-                throw new Error("Fixed width and height must be positive numbers.");
+                throw new Error("Chiều rộng và chiều cao cố định phải là số dương.");
             }
-            const canvasesToExport = [];
-            const filenamesToExport = [];
+
+            // BƯỚC 2: Bắt đầu các tác vụ tốn thời gian SAU KHI đã có quyền.
             for (let i = 0; i < a417_all_records.length; i++) {
                 const record = a417_all_records[i];
+                const filename = `${record.filename || record.customer_id || `record_${i}`}.png`;
+
+                // Tạo mã vạch
                 const generationResult = generateAamvaDataString(record);
                 const barcodeCanvas = generateBarcode(generationResult.finalString, scale, 0);
-                if (!barcodeCanvas) continue;
+                if (!barcodeCanvas) {
+                    console.warn(`Skipping record ${i} due to barcode generation error.`);
+                    continue; // Bỏ qua nếu tạo barcode lỗi
+                }
+
                 const finalCanvas = document.createElement('canvas');
                 const ctx = finalCanvas.getContext('2d');
                 if(useFixedSize) {
                     finalCanvas.width = fixedW;
                     finalCanvas.height = fixedH;
+                    // Vẽ vào giữa
                     ctx.drawImage(barcodeCanvas, (fixedW - barcodeCanvas.width) / 2, (fixedH - barcodeCanvas.height) / 2);
                 } else {
                     finalCanvas.width = barcodeCanvas.width;
                     finalCanvas.height = barcodeCanvas.height;
                     ctx.drawImage(barcodeCanvas, 0, 0);
                 }
-                const filename = `${record.filename || record.customer_id || `record_${i}`}.png`;
-                canvasesToExport.push(finalCanvas);
-                filenamesToExport.push(filename);
+                
+                // BƯỚC 3: Lưu từng canvas vào thư mục đã được cấp quyền
+                const blob = await new Promise(resolve => finalCanvas.toBlob(resolve, 'image/png'));
+                const fileHandle = await directoryHandle.getFileHandle(filename, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
             }
-            await exportCanvasesToDirectory(canvasesToExport, filenamesToExport);
+
+            alert(`Xuất thành công ${a417_all_records.length} ảnh!`);
+
         } catch (e) {
-            alert("Export error: " + e.message);
+            alert("Đã xảy ra lỗi trong quá trình xuất: " + e.message);
+            console.error("Export process error:", e);
+        } finally {
+            // Ẩn chỉ báo đang tải
+            // Ví dụ: document.getElementById('loading-indicator').style.display = 'none';
         }
     }
+
+// ... (giữ nguyên phần code còn lại của bạn)
     
     // --- Khởi chạy ---
     buildFormAndControls();
-}
+}exportAllImages

@@ -1,90 +1,89 @@
-Các điểm chuẩn xác và quan trọng:
-Header đầy đủ và có cấu trúc:
-@<LF><RS><CR>ANSI 636010100002DL00410264ZC03050040DAQW339221081435<LF>
-
-@<LF>: Ký tự bắt đầu chuỗi (thường dùng cho PDF417).
-
-<RS><CR>: Các ký tự phân tách bản ghi và xuống dòng, rất quan trọng.
-
-ANSI 636010: Mã định danh AAMVA và phiên bản.
-
-100002: Phiên bản tiêu chuẩn AAMVA.
-
-DL: Loại tài liệu.
-
-00410264: Đây có vẻ là độ dài của Subfile 1 (DL) và Subfile 2 (ảnh).
-
-ZC03050040: Đây là phần quan trọng nhất cho Subfile 3 (ZC). ZC cho biết có subfile ZC, 0305 là độ dài của subfile ZC, và 0040 có thể là offset hoặc độ dài phụ của một phần nào đó trong ZC.
-
-DAQW339221081435: Số bằng lái xe được đặt ngay trong header, đây là một phần của cấu trúc AAMVA.
-
-<LF>: Ký tự phân tách cuối header.
-
-Sử dụng <LF> làm Field Separator:
-Hầu hết các trường dữ liệu được kết thúc bằng <LF> (Line Feed), ví dụ: DCSWilson<LF>, DACJessica<LF>, v.v. Đây là cách chuẩn để phân tách các trường dữ liệu trong một Subfile.
-
-Vấn đề còn tồn tại:
-Vị trí và kết thúc của các trường ZC:
-Bạn có các trường ZC ở cuối cùng:
-ZCABLK<LF>
-ZCBBRO<LF>
-ZCCEXAMPLE-C<LF>
-ZCDEXAMPLE-D<CR>
-
-Vấn đề: Các trường ZC này cần nằm sau tất cả các trường dữ liệu thông thường (DL) và trước ký tự <CR> cuối cùng của toàn bộ chuỗi. Tuy nhiên, cách bạn đặt chúng sau <CR> chính và kết thúc bằng một <CR> riêng cho phần ZC là không đúng cấu trúc AAMVA.
-
-Nếu ZC03050040 trong header đã chỉ ra rằng có một subfile ZC, thì các trường ZC phải được bao gồm trong tổng độ dài mà ZC0305 đề cập đến và được phân tách bởi các ký tự <LF> bên trong subfile ZC, sau đó subfile ZC sẽ được nối liền với các subfile khác, và toàn bộ chuỗi sẽ kết thúc bằng một <CR> duy nhất (Record Separator cuối cùng).
-
-Để đạt chuẩn hoàn toàn:
-Bạn cần di chuyển các trường ZC vào đúng vị trí của chúng, sao cho chúng là một phần của tổng chuỗi dữ liệu và được kết thúc bởi một <CR> duy nhất cho toàn bộ dữ liệu.
-
-Ví dụ về cấu trúc đúng (tổng quát):
-
-@<LF><RS><CR>ANSI ...DL_LEN...ZC_LEN... <SUBFILE_1_DATA><LF><SUBFILE_2_DATA>(Ảnh, nếu có)<LF><SUBFILE_3_ZC_DATA><CR>
-
-Trong đó:
-
-<SUBFILE_1_DATA> là tất cả các trường DL từ DCSWilson đến DDK0 và kết thúc bằng <LF>.
-
-<SUBFILE_3_ZC_DATA> là ZCABLK<LF>ZCBBRO<LF>ZCCEXAMPLE-C<LF>ZCDEXAMPLE-D.
-
-Chỉ có một <CR> cuối cùng cho toàn bộ chuỗi dữ liệu.
-
-Đoạn dữ liệu sửa đổi (giả định):
-
-@<LF>
-<RS><CR>ANSI 636010100002DL00410264ZC03050040DAQW339221081435<LF>
-DCSWilson<LF>
-DACJessica<LF>
-DADNONE<LF>
-DBD04022023<LF>
-DBB08041994<LF>
-DBA04022031<LF>
-DBC2<LF>
-DAYBLK<LF>
-DAU063<LF>
-DAZBRO<LF>
-DAG2043 Pine Rd<LF>
-DAIJacksonville<LF>
-DAJFL<LF>
-DAK32221<LF>
-DCGUSA<LF>
-DDEN<LF>
-DDFN<LF>
-DDGN<LF>
-DCFF180252752357<LF>
-DCK0100491810461020<LF>
-DDAF<LF>
-DDB09122021<LF>
-DCBNONE<LF>
-DCDNONE<LF>
-DCAF<LF>
-DAW192<LF>
-DDK0<LF>
-ZCABLK<LF>
-ZCBBRO<LF>
-ZCCEXAMPLE-C<LF>
-ZCDEXAMPLE-D<CR>
-(Lưu ý: Tôi đã thay đổi <CR> ở dòng DDK0<CR> thành <LF> và chỉ có một <CR> duy nhất ở cuối cùng sau ZCDEXAMPLE-D. Bạn cũng cần đảm bảo các con số 0305 và 0040 trong header ZC03050040 phản ánh đúng độ dài thực tế của các trường ZC).
-
-Kết luận: Bạn đã đi đúng hướng với việc sử dụng các ký tự phân tách. Lần này, vấn đề chỉ nằm ở vị trí của các trường ZC và việc có nhiều hơn một ký tự kết thúc <CR> cho toàn bộ chuỗi dữ liệu. Sửa lỗi này sẽ giúp chuỗi dữ liệu của bạn hoàn toàn tuân thủ AAMVA.
+Marlene
+Oscar
+Christopher
+William
+Niva
+Donna
+Lydia
+David
+Julia
+Robert
+Jt
+Mia
+Susie
+Sheila
+Jill
+Nedra
+Brent.
+Timothy
+Mark
+Robert
+Sammy
+Thomas
+Arnold
+Vanna
+Carla
+Carlos
+Travis
+Allen
+Che
+Christiane
+Krisha r
+Erick
+Derek
+Jay
+Jesse sr
+Jose
+Natasha
+Elizabeth
+Brian
+Rudy
+Gwendolyn
+Donald
+Salvador
+Brock
+Patricia
+Tracy
+Yolanda
+Robert
+Gurkaran
+Michelle
+Stacy
+Joseph
+Juletta
+Adolfo
+Gabriela
+Fred
+Maria
+Chelcee
+Joseph
+Jessica
+Monica
+Luiza
+Chris
+Daron
+James
+Sandy
+Ashley
+Brandon
+Donna
+Shon
+Michael m
+Carlos m
+Doris a
+Maria
+Jacobo
+Victor
+Chastity
+Tine
+Napoleon
+Deon
+Karly
+Kenneth s
+Jena
+Jason
+Eric
+Velinda
+Jill
+James
+Maryann
